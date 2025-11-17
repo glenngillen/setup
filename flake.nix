@@ -26,17 +26,16 @@
       ...
     }@inputs:
     let
-      # TODO: replace with your username
-      primaryUser = "YOUR_USERNAME";
+      primaryUser = "gg";
     in
     {
       # build darwin flake using:
       # $ darwin-rebuild build --flake .#<name>
-      darwinConfigurations."my-macbook" = darwin.lib.darwinSystem {
+      darwinConfigurations."calculon" = darwin.lib.darwinSystem {
         system = "aarch64-darwin";
         modules = [
           ./darwin
-          ./hosts/my-macbook/configuration.nix
+          ./hosts/calculon/configuration.nix
         ];
         specialArgs = { inherit inputs self primaryUser; };
       };

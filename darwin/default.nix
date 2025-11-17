@@ -37,6 +37,7 @@
 
   # home-manager config
   home-manager = {
+    backupFileExtension = "backup";
     useGlobalPkgs = true;
     useUserPackages = true;
     users.${primaryUser} = {
