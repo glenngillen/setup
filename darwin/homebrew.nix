@@ -15,6 +15,7 @@
     # homebrew is best for GUI apps
     # nixpkgs is best for CLI tools
     casks = [
+
       # OS enhancements
       "aerospace"
       "cleanshot"

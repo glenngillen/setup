@@ -39,6 +39,6 @@
         ];
         specialArgs = { inherit inputs self primaryUser; };
       };
-
+      packages.aarch64-darwin.default = {};
     };
 }
