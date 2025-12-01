@@ -23,6 +23,9 @@
       ffmpeg
       ollama
 
+      # containerisation
+      colima
+      
       # fonts
       nerd-fonts.fira-code
       nerd-fonts.fira-mono

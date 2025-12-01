@@ -36,13 +36,7 @@
 
       # other
       "1password"
-      "anki"
-      "brave-browser"
-      "obsidian"
-      "protonvpn"
       "spotify"
-      "thebrowsercompany-dia"
-      "zen"
     ];
     brews = [
       "docker"
