@@ -37,6 +37,9 @@
       # other
       "1password"
       "spotify"
+      "tailscale"
+      "lulu"
+      "google-chrome"
     ];
     brews = [
       "docker"
