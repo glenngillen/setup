@@ -12,6 +12,8 @@
       gh
       zoxide
 
+      colima
+
       # programming languages
       mise # node, deno, bun, rust, python, etc.
 
@@ -25,7 +27,7 @@
 
       # containerisation
       colima
-      
+
       # fonts
       nerd-fonts.fira-code
       nerd-fonts.fira-mono
