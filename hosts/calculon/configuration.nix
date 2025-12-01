@@ -4,6 +4,10 @@
   ...
 }:
 {
+   imports = [
+    ../../home/infracost.nix
+  ];
+
   networking.hostName = "calculon";
 
   # host-specific homebrew casks
