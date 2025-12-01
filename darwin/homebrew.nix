@@ -33,6 +33,8 @@
       "discord"
       "slack"
       "signal"
+      "whatsapp"
+      "zoom"
 
       # other
       "1password"
