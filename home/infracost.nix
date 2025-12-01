@@ -21,6 +21,7 @@
       "notion"
       "notion-calendar"
 
+      "finicky"
     ];
     brews = [
       "docker"

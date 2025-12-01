@@ -40,7 +40,7 @@
       "1password"
       "spotify"
       "tailscale"
-      "lulu"
+      "little-snitch"
       "google-chrome"
     ];
     brews = [
