@@ -20,6 +20,7 @@
 
       "notion"
       "notion-calendar"
+      "linear"
 
       "finicky"
     ];

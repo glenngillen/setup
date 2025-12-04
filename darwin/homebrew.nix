@@ -19,7 +19,7 @@
       # OS enhancements
       "aerospace"
       "cleanshot"
-      "hiddenbar"
+      "jordanbaird-ice"
       "raycast"
       "betterdisplay"
 

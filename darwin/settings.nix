@@ -2,7 +2,7 @@
 {
   # touch ID for sudo
   security.pam.services.sudo_local.touchIdAuth = true;
-
+  
   # system defaults and preferences
   system = {
     stateVersion = 6;
@@ -49,6 +49,8 @@
       NSGlobalDomain = {
         # Add a context menu item for showing the Web Inspector in web views
         WebKitDeveloperExtras = true;
+        NSStatusItemSelectionPadding = 0;
+        NSStatusItemSpacing = 0;
       };
       "com.apple.finder" = {
         ShowExternalHardDrivesOnDesktop = true;
