@@ -1,5 +1,18 @@
-{ primaryUser, ... }:
+{ primaryUser, pkgs, ... }:
 {
+  environment.systemPackages = with pkgs; [
+    nixd
+  ];
+
+  environment.shellInit = ''
+    switchyubi() {
+      rm -r ~/.gnupg/private-keys-v1.d
+      gpgconf --kill gpg-agent
+      gpg --card-status
+      gpgconf --launch gpg-agent
+    }
+  '';
+
   homebrew = {
     enable = true;
 
@@ -52,7 +65,7 @@
   home-manager.users.${primaryUser} = {
     home = {
       shellAliases = {
-        ls = "eza";
+        ls = "eza -Ahl --git";
         cat = "bat";
         grep = "rg";
         find = "fd";
@@ -63,11 +76,41 @@
         ping = "gping";
 
         cd = "z";
+
+        # git
+        gpull = "git pull";
+        gpush = "git push";
+        gfpush = "git push --force-with-lease";
+        gpr = "git pull --rebase";
+        gdiff = "git diff";
+        gcom = "git commit";
+        gca = "git commit -a";
+        gcam = "git commit -am";
+        gco = "git checkout";
+        gbr = "git branch";
+        gst = "git status";
+        grm = "git status | grep deleted | awk '{print \$3}' | xargs git rm";
+        gphm = "git push heroku master";
+        gpsm = "git push staging master";
+        gadd = "git add";
+
+        # terraform
+        tf = "terraform";
+
+        # heroku
+        hk = "heroku";
+
+        # commands starting with % for pasting from web
+        "%" = " ";
       };
     };
+
     programs = {
       zsh = {
         initContent = "$(zoxide init zsh)";
+        shellAliases = {
+          reload = ". ~/.zshenv && . ~/.zprofile && . ~/.zshrc";
+        };
       };
     };
   };
