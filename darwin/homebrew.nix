@@ -23,12 +23,6 @@
       "raycast"
       "betterdisplay"
 
-      # dev
-      "cursor"
-      "ghostty"
-      "visual-studio-code"
-      "zed"
-
       # messaging
       "discord"
       "slack"
@@ -42,10 +36,9 @@
       "tailscale-app"
       "little-snitch"
       "google-chrome"
+      "licecap"
     ];
     brews = [
-      "docker"
-      "colima"
     ];
     taps = [
       "nikitabobko/tap"

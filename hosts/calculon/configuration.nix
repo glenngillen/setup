@@ -6,6 +6,7 @@
 {
    imports = [
     ../../home/infracost.nix
+    ../../home/dev.nix
     ../../home/design.nix
   ];
 
