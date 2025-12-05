@@ -23,6 +23,7 @@
     ];
 
     home.file.".config/finicky.ts".source = ../../home/finicky.config.ts;  
+    home.file.".config/aerospace/aerospace.toml".source = ../../home/aerospace.config.toml;  
 
     programs = {
       zsh = {
