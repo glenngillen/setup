@@ -13,20 +13,14 @@
     global.brewfile = true;
 
     casks = [
-      "slack"
-      "zoom"
-      "tailscale-app"
-      "google-chrome"
+      "chatgpt"
+      "claude"
 
-      "notion"
-      "notion-calendar"
-      "linear-linear"
-      "loom"
+      "ollama"
+      "ollama-app"
     ];
+
     brews = [
-      "docker"
-      "colima"
     ];
   };
-
 }

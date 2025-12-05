@@ -8,6 +8,7 @@
     ../../home/infracost.nix
     ../../home/dev.nix
     ../../home/design.nix
+    ../../home/ai.nix
   ];
 
   networking.hostName = "calculon";
