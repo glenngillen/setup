@@ -16,9 +16,12 @@ _: {
     enable = true;
     settings = {
       add_newline = false;
+      scan_timeout = 10;
+      format = "$all";
+
       character = {
-        success_symbol = "[λ](bold green)";
-        error_symbol = "[λ](bold red)";
+        success_symbol = "[➜](bold green)";
+        error_symbol = "[➜](bold red)";
       };
     };
   };
