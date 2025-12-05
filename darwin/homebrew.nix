@@ -19,7 +19,7 @@
       # OS enhancements
       "aerospace"
       "cleanshot"
-      "jordanbaird-ice"
+      "jordanbaird-ice@beta"
       "raycast"
       "betterdisplay"
 
@@ -39,7 +39,7 @@
       # other
       "1password"
       "spotify"
-      "tailscale"
+      "tailscale-app"
       "little-snitch"
       "google-chrome"
     ];

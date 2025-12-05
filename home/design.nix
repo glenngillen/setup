@@ -12,20 +12,10 @@
     caskArgs.no_quarantine = true;
     global.brewfile = true;
 
-    casks = [
-      "slack"
-      "zoom"
-      "tailscale-app"
-      "google-chrome"
-
-      "notion"
-      "notion-calendar"
-      "linear-linear"
-    ];
-    brews = [
-      "docker"
-      "colima"
-    ];
+    masApps = {
+      # "1Password for Safari" = 1569813296;
+      "Pixelmator Pro" = 1289583905;
+    };
   };
 
 }
