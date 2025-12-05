@@ -17,5 +17,15 @@
     # create .hushlogin file to suppress login messages
     file.".hushlogin".text = "";
   };
-  
+
+  programs.fzf = {
+    enable = true;
+  };
+  programs.zoxide = {
+    enable = true;
+  };
+  programs.direnv = {
+    enable = true;
+    nix-direnv.enable = true;
+  };
 }

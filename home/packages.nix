@@ -4,6 +4,7 @@
     packages = with pkgs; [
       # dev tools
       curl
+      wget
       vim
       tmux
       htop

@@ -107,11 +107,23 @@
 
     programs = {
       zsh = {
-        initContent = "$(zoxide init zsh)";
+        initContent = "eval $(zoxide init zsh); source ~/.config/fzf-get.sh";
         shellAliases = {
           reload = ". ~/.zshenv && . ~/.zprofile && . ~/.zshrc";
         };
       };
+    };
+  };
+  programs = {
+    gnupg.agent = {
+      enable = true;
+    };
+    zsh = {
+      enableBashCompletion = true;
+      enableCompletion = true;
+      enableFzfCompletion = true;
+      enableFzfGit = true;
+      enableFzfHistory = true;
     };
   };
 }

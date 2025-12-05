@@ -4,13 +4,18 @@
   ...
 }:
 {
-   imports = [
+  imports = [
     ../../home/infracost.nix
     ../../home/dev.nix
     ../../home/design.nix
   ];
 
   networking.hostName = "calculon";
+  networking.localHostName = "calculon";
+  networking.computerName = "calculon";
+
+  power.sleep.computer = 60;
+  power.sleep.display = 30;
 
   # host-specific homebrew casks
   homebrew.casks = [
@@ -23,8 +28,9 @@
       graphite-cli
     ];
 
-    home.file.".config/finicky.ts".source = ../../home/finicky.config.ts;  
-    home.file.".config/aerospace/aerospace.toml".source = ../../home/aerospace.config.toml;  
+    home.file.".config/finicky.ts".source = ../../home/finicky.config.ts;
+    home.file.".config/aerospace/aerospace.toml".source = ../../home/aerospace.config.toml;
+    home.file.".config/fzf-git.sh".source = ../../home/fzf-git.sh;
 
     programs = {
       zsh = {
