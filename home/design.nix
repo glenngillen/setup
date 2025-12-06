@@ -22,8 +22,9 @@
       "brotli"
       "gifsicle"
     ];
-    
+
     casks = [
+      "screenflow"
     ];
   };
 

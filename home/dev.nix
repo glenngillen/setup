@@ -60,6 +60,8 @@
       "ghostty"
       "visual-studio-code"
       "zed"
+
+      "screenflow"
     ];
   };
   home-manager.users.${primaryUser} = {
