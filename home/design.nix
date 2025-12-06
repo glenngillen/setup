@@ -13,9 +13,8 @@
     global.brewfile = true;
 
     masApps = {
-      # "1Password for Safari" = 1569813296;
       "Pixelmator Pro" = 1289583905;
-
+      "Red Lines Tools" = 1469400117;
     };
 
     brews = [

@@ -43,5 +43,14 @@
     taps = [
       "nikitabobko/tap"
     ];
+
+    masApps = {
+      "1Blocker - Ad Blocker" = 1365531024;
+      "1Password for Safari" = 1569813296;
+      "Amphetamine" = 937984704;
+      "Kagi for Safari" = 1622835804;
+      "Noizio — focus, relax, sleep" = 928871589;
+      "Webcam Effects" = 1525288396;
+    };
   };
 }

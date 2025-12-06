@@ -153,7 +153,7 @@
       # Add a context menu item for showing the Web Inspector in web views
       WebKitDeveloperExtras = true;
       NSStatusItemSelectionPadding = 0;
-      NSStatusItemSpacing = 0;
+      NSStatusItemSpacing = 2;
     };
     "com.apple.finder" = {
     };

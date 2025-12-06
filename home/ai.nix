@@ -18,6 +18,8 @@
 
       "ollama"
       "ollama-app"
+
+      "diffusionbee"
     ];
 
     brews = [
