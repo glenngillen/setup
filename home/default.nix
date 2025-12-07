@@ -5,7 +5,6 @@
     ./git.nix
     ./shell.nix
     ./mise.nix
-    ./fonts.nix
   ];
 
   home = {

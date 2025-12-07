@@ -32,6 +32,7 @@
     home.file.".config/finicky.ts".source = ../../home/finicky.config.ts;
     home.file.".config/aerospace/aerospace.toml".source = ../../home/aerospace.config.toml;
     home.file.".config/fzf-git.sh".source = ../../home/fzf-git.sh;
+    home.file.".config/ghostty/config".source = ../../home/ghosty.config;
 
     programs = {
       zsh = {
