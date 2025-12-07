@@ -34,7 +34,7 @@
         orientation = "bottom";
         show-recents = false;
         static-only = true;
-        wvous-tr-corner = 13; # lock screen
+        wvous-tr-corner = 5; # screensaver
       };
 
       loginwindow = {
@@ -116,7 +116,7 @@
 
       screensaver = {
         askForPassword = true;
-        askForPasswordDelay = 300;
+        askForPasswordDelay = 5;
       };
 
       SoftwareUpdate.AutomaticallyInstallMacOSUpdates = true;
