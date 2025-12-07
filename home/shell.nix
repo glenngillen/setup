@@ -24,11 +24,11 @@ _: {
         error_symbol = "[✗](bold red)";
       };
       cmd_duration = {
-        format = "[  $duration ]($style)";
+        format = "[  $duration ]($style)";
         style = "fg:bright-white bg:18";
       };
       directory = {
-        format = "[ ﱮ $path ]($style)";
+        format = "[  $path ]($style)";
         style = "fg:#E4E4E4 bg:#3B76F0";
       };
       git_branch = {
@@ -45,6 +45,14 @@ _: {
         added_style = "fg:#1C3A5E bg:#FCF392";
         deleted_style = "fg:bright-red bg:235";
         disabled = false;
+      };
+      directory = {
+        "substitutions" = {
+          "Documents" = "󰈙 ";
+          "Downloads" = " ";
+          "Music" = " ";
+          "Pictures" = " ";
+        };
       };
     };
   };
