@@ -152,8 +152,8 @@
     NSGlobalDomain = {
       # Add a context menu item for showing the Web Inspector in web views
       WebKitDeveloperExtras = true;
-      NSStatusItemSelectionPadding = 0;
-      NSStatusItemSpacing = 2;
+      NSStatusItemSelectionPadding = 6;
+      NSStatusItemSpacing = 12;
     };
     "com.apple.finder" = {
     };
