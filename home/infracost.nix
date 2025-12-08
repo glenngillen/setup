@@ -20,6 +20,7 @@
     casks = [
       "slack"
       "zoom"
+      "microsoft-teams"
       "tailscale-app"
       "google-chrome"
 
