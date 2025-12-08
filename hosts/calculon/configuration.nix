@@ -34,6 +34,7 @@
     home.file.".config/fzf-git.sh".source = ../../home/fzf-git.sh;
     home.file."/Library/Application\ Support/com.mitchellh.ghostty/config".source =
       ../../home/ghostty.config;
+    home.file.".gitconfig".source = ../../home/configs/gitconfig.config;
 
     programs = {
       zsh = {

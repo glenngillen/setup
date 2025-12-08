@@ -43,6 +43,7 @@
       "gh"
       "ghi"
       "git-lfs"
+      "gpg"
       "gping" # ping replacement
       "heroku"
       "pinentry"
