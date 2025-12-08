@@ -67,7 +67,10 @@
         go env -w GONOSUMDB=github.com/infracost/*
         go clean -modcache
         GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa"
-        go install github.com/infracost/ic/cmd/ic@latest
+        if ! command -v ic >/dev/null 2>&1
+        then
+          go install github.com/infracost/ic/cmd/ic@latest
+        fi
       '';
     };
 }

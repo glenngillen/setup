@@ -207,6 +207,9 @@
       "com.apple.Safari.ContentPageGroupIdentifier.WebKit2JavaEnabled" = false;
       "com.apple.Safari.ContentPageGroupIdentifier.WebKit2JavaEnabledForLocalFiles" = false;
       "com.apple.Safari.ContentPageGroupIdentifier.WebKit2JavaScriptCanOpenWindowsAutomatically" = false;
+      NSUserKeyEquivalents = {
+        "Quit Safari" = "@^q"; # Option-Cmd-Q
+      };
     };
     "com.apple.mail" = {
       # Disable inline attachments (just show the icons)
