@@ -154,6 +154,20 @@
       WebKitDeveloperExtras = true;
       NSStatusItemSelectionPadding = 6;
       NSStatusItemSpacing = 12;
+      AppleKeyboardUIMode = 3;
+    };
+    "com.apple.BezelServices" = {
+      kDim = true;
+      kDimTime = 300;
+    };
+    "com.apple.BluetoothAudioAgen" = {
+      "Apple Bitpool Max (editable)" = 80;
+      "Apple Bitpool Min (editable)" = 80;
+      "Apple Initial Bitpool (editable)" = 80;
+      "Apple Initial Bitpool Min (editable)" = 80;
+      "Negotiated Bitpool" = 80;
+      "Negotiated Bitpool Max" = 80;
+      "Negotiated Bitpool Min" = 80;
     };
     "com.apple.finder" = {
     };
@@ -161,11 +175,6 @@
       # Avoid creating .DS_Store files on network or USB volumes
       DSDontWriteNetworkStores = true;
       DSDontWriteUSBStores = true;
-    };
-    "com.apple.screensaver" = {
-      # Require password immediately after sleep or screen saver begins
-      askForPassword = 1;
-      askForPasswordDelay = 0;
     };
     "com.apple.screencapture" = {
       location = "~/Desktop";
