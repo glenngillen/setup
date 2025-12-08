@@ -117,7 +117,7 @@
 
     programs = {
       zsh = {
-        initContent = "eval $(zoxide init zsh); source ~/.config/fzf-get.sh";
+        initContent = "eval $(zoxide init zsh); source ~/.config/fzf-git.sh";
         shellAliases = {
           reload = ". ~/.zshenv && . ~/.zprofile && . ~/.zshrc";
         };
