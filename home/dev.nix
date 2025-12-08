@@ -59,6 +59,7 @@
     casks = [
       "cursor"
       "ghostty"
+      "git-credential-manager"
       "visual-studio-code"
       "zed"
 
