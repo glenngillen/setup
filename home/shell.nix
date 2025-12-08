@@ -52,6 +52,7 @@ _: {
           "Downloads" = " ";
           "Music" = " ";
           "Pictures" = " ";
+          "Development" = "󱃖 "
         };
       };
     };
