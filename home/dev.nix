@@ -69,7 +69,7 @@
     ];
 
     masApps = {
-      "Patterns - The Regex App" = 429449079;
+      "Patterns" = 429449079;
     };
   };
   home-manager.users.${primaryUser} = {

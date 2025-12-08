@@ -29,7 +29,7 @@ export default {
     // Teams
     {
       match: finicky.matchHostnames(["teams.microsoft.com"]),
-      browser: "com.microsoft.teams",
+      browser: "Microsoft Teams",
       url: ({ url }) => ({ ...url, protocol: "msteams" }),
     },
 
