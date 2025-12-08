@@ -52,13 +52,22 @@
             [
               mise
               git
+              openssh
+              git-lfs
             ]
           )
         }:$PATH"
         GOPATH=$(mise bin-paths | grep "/go/")
         PATH="$GOPATH:$PATH"
-        GOPRIVATE=github.com/infracost/ic
-        go install github.com/infracost/ic/cmd/ic@latest && ic update
+        GIT_CONFIG_KEY_0="url.'git@github.com:'.insteadOf"
+        GIT_CONFIG_VALUE_0="https://github.com"
+        GIT_CONFIG_COUNT=1
+        go env -w GOPROXY=direct
+        go env -w GOPRIVATE=github.com/infracost/*
+        go env -w GONOSUMDB=github.com/infracost/*
+        go clean -modcache
+        GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa"
+        go install github.com/infracost/ic/cmd/ic@latest
       '';
     };
 }

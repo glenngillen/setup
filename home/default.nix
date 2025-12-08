@@ -28,4 +28,7 @@
     enable = true;
     nix-direnv.enable = true;
   };
+  programs.ssh = {
+    enable = true;
+  };
 }
