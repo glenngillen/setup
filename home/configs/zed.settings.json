@@ -5,7 +5,7 @@
   "buffer_font_size": 15,
   "active_pane_modifiers": {
     "border_size": 0.0,
-    "inactive_opacity": 0.7
+    "inactive_opacity": 0.5
   },
   "bottom_dock_layout": "full",
   "auto_indent": true,
