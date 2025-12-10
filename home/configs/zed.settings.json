@@ -24,13 +24,13 @@
   },
   "theme": {
     "mode": "system",
-    "light": "Latte",
-    "dark": "Mocha"
+    "light": "Catppuccin Latte",
+    "dark": "Catppuccin Mocha"
   },
   "icon_theme": {
     "mode": "system",
-    "dark": "Catppuccin Icons (Mocha)",
-    "light": "Catppuccin Icons (Latte)"
+    "dark": "Catppuccin Mocha",
+    "light": "Catppuccin Latte"
   },
   "autosave": "off",
   "auto_signature_help": true,
