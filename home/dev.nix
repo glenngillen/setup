@@ -113,6 +113,7 @@
         # commands starting with % for pasting from web
         "%" = " ";
       };
+
     };
 
     programs = {
@@ -136,4 +137,5 @@
       enableFzfHistory = true;
     };
   };
+
 }

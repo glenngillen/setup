@@ -1,8 +1,0 @@
-{
-  "container-use": {
-    "source": "custom",
-    "command": "container-use",
-    "args": ["stdio"],
-    "env": {}
-  }
-}
