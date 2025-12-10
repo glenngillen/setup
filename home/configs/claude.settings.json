@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run lint)",
+      "Bash(npm run test:*)",
+      "Read(~/.zshrc)",
+      "mcp__container-use__environment_checkpoint",
+      "mcp__container-use__environment_create",
+      "mcp__container-use__environment_add_service",
+      "mcp__container-use__environment_file_delete",
+      "mcp__container-use__environment_file_list",
+      "mcp__container-use__environment_file_read",
+      "mcp__container-use__environment_file_write",
+      "mcp__container-use__environment_open",
+      "mcp__container-use__environment_run_cmd",
+      "mcp__container-use__environment_update"
+    ],
+    "deny": [
+      "Bash(curl:*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)"
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "0",
+    "OTEL_METRICS_EXPORTER": "otlp",
+    "OTEL_EXPORTER_OTLP_METRICS_PROTOCOL": "http/json",
+    "OTEL_EXPORTER_OTLP_PROTOCOL": "http/json"
+  }
+}

@@ -9,6 +9,8 @@
     ../../home/dev.nix
     ../../home/design.nix
     ../../home/ai.nix
+    ../../home/personal.nix
+    ../../home/dev-ai.nix
   ];
 
   networking.hostName = "calculon";
@@ -25,10 +27,6 @@
 
   # host-specific home-manager configuration
   home-manager.users.${primaryUser} = {
-    home.packages = with pkgs; [
-      graphite-cli
-    ];
-
     home.file.".config/finicky.ts".source = ../../home/configs/finicky.config.ts;
     home.file.".config/aerospace/aerospace.toml".source = ../../home/configs/aerospace.config.toml;
     home.file.".config/fzf-git.sh".source = ../../home/configs/fzf-git.sh;
