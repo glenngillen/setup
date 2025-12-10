@@ -1,4 +1,4 @@
-{ ... }:
+{ primaryUser, ... }:
 {
   homebrew = {
     enable = true;
@@ -39,6 +39,7 @@
       "licecap"
     ];
     brews = [
+      "mas"
     ];
     taps = [
       "nikitabobko/tap"
@@ -52,5 +53,8 @@
       "Noizio" = 928871589;
       "Webcam Effects" = 1525288396;
     };
+  };
+  home-manager.users.${primaryUser} = {
+    home.file.".config/aerospace/aerospace.toml".source = ../home/configs/aerospace.config.toml;
   };
 }

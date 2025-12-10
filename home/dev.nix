@@ -114,6 +114,9 @@
         "%" = " ";
       };
 
+      file.".config/zed/settings.json".source = ./configs/zed.settings.json;
+      file.".config/fzf-git.sh".source = ./configs/fzf-git.sh;
+      file."/Library/Application\ Support/com.mitchellh.ghostty/config".source = ./configs/ghostty.config;
     };
 
     programs = {

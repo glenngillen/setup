@@ -37,7 +37,7 @@
     {
       home.file.".claude/CLAUDE.md".source = ./configs/agent.container-use.md;
       home.file.".claude/settings.json".source = ./configs/claude.settings.json;
-      home.file."zed/settings.json".source = ./configs/zed.settings.json;
+
       home.activation.container-use = lib.hm.dag.entryAfter [ "writeBoundary" "homebrew" ] ''
         PATH="${
           lib.makeBinPath (

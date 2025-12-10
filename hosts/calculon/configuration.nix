@@ -28,11 +28,6 @@
   # host-specific home-manager configuration
   home-manager.users.${primaryUser} = {
     home.file.".config/finicky.ts".source = ../../home/configs/finicky.config.ts;
-    home.file.".config/aerospace/aerospace.toml".source = ../../home/configs/aerospace.config.toml;
-    home.file.".config/fzf-git.sh".source = ../../home/configs/fzf-git.sh;
-    home.file."/Library/Application\ Support/com.mitchellh.ghostty/config".source =
-      ../../home/configs/ghostty.config;
-    home.file.".gitconfig".source = ../../home/configs/gitconfig.config;
 
     programs = {
       zsh = {
