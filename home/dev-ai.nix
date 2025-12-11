@@ -18,9 +18,11 @@
 
     taps = [
       "dagger/tap"
+      "steveyegge/beads"
     ];
 
     brews = [
+      "bd"
     ];
 
     casks = [
@@ -35,7 +37,7 @@
   home-manager.users.${primaryUser} =
     { lib, ... }:
     {
-      home.file.".claude/CLAUDE.md".source = ./configs/agent.container-use.md;
+      home.file.".claude/CLAUDE.md".source = ./configs/agent.md;
       home.file.".claude/settings.json".source = ./configs/claude.settings.json;
 
       home.activation.container-use = lib.hm.dag.entryAfter [ "writeBoundary" "homebrew" ] ''
