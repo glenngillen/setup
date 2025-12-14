@@ -23,6 +23,8 @@
 
     brews = [
       "bd"
+      "devcontainer"
+      "opencode"
     ];
 
     casks = [

@@ -20,7 +20,8 @@
     "prisma": true,
     "nix": true,
     "catppuccin": true,
-    "catppuccin-icons": true
+    "catppuccin-icons": true,
+    "opencode": true
   },
   "theme": {
     "mode": "system",

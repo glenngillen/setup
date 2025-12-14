@@ -37,9 +37,18 @@
       "little-snitch"
       "google-chrome"
       "licecap"
+
+      # security
+      "yubico-authenticator"
+
     ];
     brews = [
       "mas"
+
+      # security
+      "gnupg"
+      "ykman"
+      "pinentry-mac"
     ];
     taps = [
       "nikitabobko/tap"
