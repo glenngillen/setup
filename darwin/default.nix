@@ -51,6 +51,7 @@
   };
 
   # macOS-specific settings
+  #
   system.primaryUser = primaryUser;
   users.users.${primaryUser} = {
     home = "/Users/${primaryUser}";
