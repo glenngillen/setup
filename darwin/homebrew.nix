@@ -44,6 +44,7 @@
     ];
     brews = [
       "mas"
+      "trash-cli"
 
       # security
       "gnupg"
