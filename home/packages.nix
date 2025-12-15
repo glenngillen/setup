@@ -10,7 +10,6 @@
       htop
       tree
       ripgrep
-      gh
       zoxide
 
       colima
@@ -23,11 +22,6 @@
       biome
       nixfmt-rfc-style
       yt-dlp
-      ffmpeg
-      ollama
-
-      # containerisation
-      colima
 
       # fonts
       nerd-fonts.fira-code
