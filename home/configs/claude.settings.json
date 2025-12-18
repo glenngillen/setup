@@ -27,5 +27,11 @@
     "OTEL_METRICS_EXPORTER": "otlp",
     "OTEL_EXPORTER_OTLP_METRICS_PROTOCOL": "http/json",
     "OTEL_EXPORTER_OTLP_PROTOCOL": "http/json"
+  },
+  "mcpServers": {
+    "infracost": {
+      "command": "node",
+      "args": ["/Users/gg/Development/infracost/mcp/dist/cli.js"]
+    }
   }
 }

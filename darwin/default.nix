@@ -1,4 +1,5 @@
 {
+  config,
   pkgs,
   inputs,
   self,
@@ -57,8 +58,11 @@
     home = "/Users/${primaryUser}";
     shell = pkgs.zsh;
   };
+
   environment = {
     systemPath = [
+      "/run/current-system/sw/bin"
+      "/etc/profiles/per-user/${primaryUser}/bin"
       "/opt/homebrew/bin"
     ];
     pathsToLink = [ "/Applications" ];

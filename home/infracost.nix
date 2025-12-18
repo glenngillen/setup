@@ -32,12 +32,28 @@
     brews = [
       "docker"
       "colima"
+
+      "infracost"
     ];
   };
 
   home-manager.users.${primaryUser} =
     { pkgs, lib, ... }:
     {
+      programs = {
+        zsh = {
+          initContent = ''
+            function aws() {
+              if [[ $1 == "login" ]]; then
+                shift # Remove the 'login' argument
+                command aws sso login --sso-session infracost "$@"
+              else
+                command aws "$@"
+              fi
+            }
+          '';
+        };
+      };
       programs.git = {
         enable = true;
         # ...

@@ -14,6 +14,9 @@
 
     # declarative homebrew management
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
+
+    # sops (secrets management)
+    sops-nix.url = "github:Mic92/sops-nix";
   };
 
   outputs =
@@ -23,6 +26,7 @@
       nixpkgs,
       home-manager,
       nix-homebrew,
+      sops-nix,
       ...
     }@inputs:
     let
@@ -36,9 +40,10 @@
         modules = [
           ./darwin
           ./hosts/calculon/configuration.nix
+          sops-nix.darwinModules.sops
         ];
         specialArgs = { inherit inputs self primaryUser; };
       };
-      packages.aarch64-darwin.default = {};
+      packages.aarch64-darwin.default = { };
     };
 }

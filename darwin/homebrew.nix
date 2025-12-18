@@ -49,6 +49,7 @@
       "gnupg"
       "ykman"
       "pinentry-mac"
+      "age"
     ];
     taps = [
       "nikitabobko/tap"
