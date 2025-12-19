@@ -1,4 +1,8 @@
-{ primaryUser, ... }:
+{
+  primaryUser,
+  config,
+  ...
+}:
 {
   imports = [
     ./packages.nix
@@ -17,6 +21,7 @@
     # create .hushlogin file to suppress login messages
     file.".hushlogin".text = "";
     file.".gitconfig".source = ./configs/gitconfig.config;
+
   };
 
   programs.fzf = {
@@ -32,4 +37,19 @@
   programs.ssh = {
     enable = true;
   };
+
+  sops = {
+    age.keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
+    secrets."aws.config.infracost.ini" = {
+      sopsFile = ../secrets/aws.config.infracost.ini;
+      format = "ini";
+      path = "${config.home.homeDirectory}/.aws/config";
+    };
+  };
+
+  # # Ensure ~/.aws exists
+  # home.file.".aws/.keep".text = "";
+
+  # # Put decrypted config at ~/.aws/config
+  # home.file.".aws/config".source = config.sops.secrets."aws-config-infracost".path;
 }

@@ -49,6 +49,9 @@
     extraSpecialArgs = {
       inherit inputs self primaryUser;
     };
+    sharedModules = [
+      inputs.sops-nix.homeManagerModules.sops
+    ];
   };
 
   # macOS-specific settings
