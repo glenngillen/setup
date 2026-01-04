@@ -6,7 +6,11 @@
 }:
 let
   codexUser = "_codex";
+  codexHome = "/var/lib/codex";
   claudeUser = "_claude";
+  claudeHome = "/var/lib/claude";
+  gitName = "Glenn Gillen";
+  gitEmail = "me@glenngillen.com";
 
   codexAsUser = pkgs.writeShellScriptBin "codex-as-codexuser" ''
     set -euo pipefail
@@ -23,12 +27,12 @@ let
       esac
     done
 
-    export HOME=/var/lib/codex
-    export XDG_CONFIG_HOME=/var/lib/codex/.config
-    export XDG_CACHE_HOME=/var/lib/codex/.cache
-    export XDG_DATA_HOME=/var/lib/codex/.local/share
-    export TERM="''${TERM:-xterm-256color}"
-    export COLORTERM="''${COLORTERM:-}"
+    export HOME=${codexHome}
+    export XDG_CONFIG_HOME=${codexHome}/.config
+    export XDG_CACHE_HOME=${codexHome}/.cache
+    export XDG_DATA_HOME=${codexHome}/.local/share
+    export TERM="''${TERM:-xterm-ghostty}"
+    export COLORTERM="''${COLORTERM:-xterm-ghostty}"
     export LANG="''${LANG:-}"
     export LC_ALL="''${LC_ALL:-}"
     export GH_TOKEN="$GH_TOKEN_VALUE"
@@ -77,10 +81,10 @@ let
       esac
     done
 
-    export HOME=/var/lib/claude
-    export XDG_CONFIG_HOME=/var/lib/claude/.config
-    export XDG_CACHE_HOME=/var/lib/claude/.cache
-    export XDG_DATA_HOME=/var/lib/claude/.local/share
+    export HOME=${claudeHome}
+    export XDG_CONFIG_HOME=${claudeHome}/.config
+    export XDG_CACHE_HOME=${claudeHome}/.cache
+    export XDG_DATA_HOME=${claudeHome}/.local/share
     export TERM="''${TERM:-xterm-256color}"
     export COLORTERM="''${COLORTERM:-}"
     export LANG="''${LANG:-}"
@@ -89,6 +93,9 @@ let
     export GIT_CONFIG_COUNT=1
     export GIT_CONFIG_KEY_0=safe.directory
     export GIT_CONFIG_VALUE_0="$CWD"
+    export AWS_EC2_METADATA_DISABLED=true
+    export KEYCHAIN_DISABLE=1
+    export CLAUDE_NO_KEYCHAIN=1
     umask 0002
 
     if ! cd "$CWD" 2>/dev/null; then
@@ -145,6 +152,7 @@ let
     ACL_FILE_COLLAB="group:''${GROUP} allow read,write,execute"
 
     ensure_parent_acls() {
+      echo "Checking parent directory ACLs..."
       local target="$1"
 
       local abs
@@ -163,6 +171,7 @@ let
       if [ -d "$abs" ]; then d="$abs"; else d="$(dirname "$abs")"; fi
 
       while :; do
+        echo "Checking $d..."
         if ! /bin/ls -lde "$d" 2>/dev/null | /usr/bin/grep -qE "group:''${GROUP} allow .*search"; then
           /bin/chmod +a "$ACL_PARENT_TRAVERSE" "$d" || true
         fi
@@ -186,6 +195,7 @@ let
       /usr/bin/find "$root" -type d -print0 | /usr/bin/xargs -0 -I{} /bin/sh -lc '
         d="$1"
         if ! /bin/ls -lde "$d" 2>/dev/null | /usr/bin/grep -qE "group:'"''${GROUP}"' allow .*file_inherit"; then
+          echo "Fixing ACLs on $d"
           /bin/chmod +a "'"$ACL_DIR_COLLAB"'" "$d" || true
         fi
       ' sh {}
@@ -194,6 +204,7 @@ let
       /usr/bin/find "$root" -type f -print0 | /usr/bin/xargs -0 -I{} /bin/sh -lc '
         f="$1"
         if ! /bin/ls -le "$f" 2>/dev/null | /usr/bin/grep -qE "group:'"''${GROUP}"' allow .*read"; then
+          echo "Fixing ACLs on $f"
           /bin/chmod +a "'"$ACL_FILE_COLLAB"'" "$f" || true
         fi
       ' sh {}
@@ -210,17 +221,20 @@ let
     # Parents (so _codex/_claude can reach the tree under /Users/gg)
     for path in "$@"; do
       ensure_parent_acls "$path"
-      git config --global --add safe.directory "$path"
+      abs="$(cd "$path" && pwd -P)"
+      git config --global --add safe.directory "$abs/*x"
     done
 
     # Group ownership + mode bits
+    echo "Updating group ownership..."
     /usr/sbin/chown -R ":''${GROUP}" "$@"
     /bin/chmod -R g+rwX "$@"
 
     # setgid on directories so new children inherit group
     for path in "$@"; do
       if [ -d "$path" ]; then
-        /usr/bin/find "$path" -type d -exec /bin/chmod g+s {} +
+        echo "Setting setgid on directories..."
+        /usr/bin/find . -type d \! -perm -g+s -exec /bin/chmod g+s {} +
       fi
     done
 
@@ -259,7 +273,7 @@ in
     uid = 4200;
     gid = 4210;
     description = "Restricted service user for Codex";
-    home = "/var/lib/codex";
+    home = codexHome;
     createHome = true;
     isHidden = true;
     shell = null;
@@ -269,7 +283,7 @@ in
     uid = 4201;
     gid = 4210;
     description = "Restricted service user for Claude";
-    home = "/var/lib/claude";
+    home = claudeHome;
     createHome = true;
     isHidden = true;
     shell = null;
@@ -286,6 +300,9 @@ in
 
   system.activationScripts.aiPermissions.text = ''
     sudo chmod +a "group:aicoders allow search,readattr,readextattr,readsecurity" /Users/${primaryUser}
+    sudo chmod +a "group:aicoders allow read,execute,search" "$TMPDIR"
+    sudo chmod +a "group:aicoders allow read,execute,search,file_inherit,directory_inherit" "$\{TMPDIR\}TemporaryItems"
+    sudo chmod +a "group:aicoders allow search" /var/folders/
   '';
 
   homebrew = {
@@ -348,8 +365,46 @@ in
 
         hash -r
       '';
+      programs.tmux = {
+        enable = true;
+      };
     };
 
+  home-manager.users.${codexUser} = {
+    home = {
+      stateVersion = "25.05";
+      homeDirectory = codexHome;
+    };
+    programs.git = {
+      enable = true;
+      extraConfig = {
+        init.defaultBranch = "main";
+        user.name = gitName;
+        user.email = gitEmail;
+      };
+    };
+    programs.tmux = {
+      enable = true;
+    };
+  };
+
+  home-manager.users.${claudeUser} = {
+    home = {
+      stateVersion = "25.05";
+      homeDirectory = claudeHome;
+    };
+    programs.git = {
+      enable = true;
+      extraConfig = {
+        init.defaultBranch = "main";
+        user.name = gitName;
+        user.email = gitEmail;
+      };
+    };
+    programs.tmux = {
+      enable = true;
+    };
+  };
   security.sudo.extraConfig = ''
     ${primaryUser} ALL=(${claudeUser}) NOPASSWD: ${lib.getExe claudeAsUser}
     ${primaryUser} ALL=(${codexUser}) NOPASSWD: ${lib.getExe codexAsUser}
