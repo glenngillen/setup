@@ -74,8 +74,12 @@
             ]
           )
         }:$PATH"
-        git clone https://github.com/infracost/infra.git $HOME/infra
-        cd $HOME/infra/dev &&
+        if [ ! -d "$HOME/infra" ]; then
+          git clone https://github.com/infracost/infra.git $HOME/infra
+        fi
+        cd $HOME/infra
+        git pull
+        cd $HOME/infra/dev
           aws eks update-kubeconfig --name dev --profile=infracost-dev --kubeconfig kubeconfig_dev &&
           cd ../prod &&
           aws eks update-kubeconfig --name prod --profile=infracost-prod --kubeconfig kubeconfig_prod &&
