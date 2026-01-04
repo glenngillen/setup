@@ -42,6 +42,13 @@ export default {
 
     // Linear
     { match: ["linear.app/*"], browser: "Linear" },
+
+    // Infracost
+    {
+      match: ["*.infracost.com/*"],
+      browser: "Google Chrome",
+      profile: "Work",
+    },
   ],
 
   rewrite: [
