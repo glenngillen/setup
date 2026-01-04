@@ -109,7 +109,7 @@
       screencapture = {
         include-date = true;
         location = "~/Screenshots";
-        show-thumbnail = false;
+        show-thumbnail = true;
         target = "file";
         type = "png";
       };
@@ -175,10 +175,6 @@
       # Avoid creating .DS_Store files on network or USB volumes
       DSDontWriteNetworkStores = true;
       DSDontWriteUSBStores = true;
-    };
-    "com.apple.screencapture" = {
-      location = "~/Desktop";
-      type = "png";
     };
     "com.apple.Safari" = {
       # Privacy: don’t send search queries to Apple
