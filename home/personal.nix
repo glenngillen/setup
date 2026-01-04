@@ -17,6 +17,7 @@
 
     casks = [
       "superhuman"
+      "vlc"
     ];
   };
 
