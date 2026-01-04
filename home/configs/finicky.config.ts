@@ -45,7 +45,7 @@ export default {
 
     // Infracost
     {
-      match: ["*.infracost.com/*"],
+      match: ["*.infracost.io/*"],
       browser: "Google Chrome",
       profile: "Work",
     },
