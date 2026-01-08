@@ -17,6 +17,10 @@
     caskArgs.no_quarantine = true;
     global.brewfile = true;
 
+    taps = [
+      "hashicorp/tap"
+    ];
+
     casks = [
       "slack"
       "zoom"
@@ -36,6 +40,8 @@
       "colima"
 
       "infracost"
+      "tilt"
+      "hashicorp/tap/terraform"
     ];
   };
 
