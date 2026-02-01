@@ -48,7 +48,7 @@ automatically-unhide-macos-hidden-apps = true
 # Fallback value (if you omit the key): persistent-workspaces = []
 # unknown key error on the line below :/
 persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C",
-                         "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O",
+                         "D", "E", "F", "G", "I", "M", "N", "O",
                          "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
 
 # A callback that runs every time binding mode changes
@@ -56,6 +56,10 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", 
 # See: https://nikitabobko.github.io/AeroSpace/commands#mode
 # unknown key error on the line below :/
 # on-mode-changed = []
+
+exec-on-workspace-change = ['/bin/bash', '-c',
+    'aerospace move-node-to-workspace --window-id $(aerospace list-windows --monitor all --app-bundle-id co.boomvision.boom.macos | grep -i remote | cut -f 1 -d" ") $(aerospace list-workspaces --monitor mouse --visible)'
+]
 
 # Possible values: (qwerty|dvorak|colemak)
 # See https://nikitabobko.github.io/AeroSpace/guide#key-mapping
@@ -226,31 +230,31 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", 
 
 [[on-window-detected]]
     if.app-id = 'us.zoom.xos'
+    if.window-title-regex-substring = 'Zoom Workplace'
     check-further-callbacks = false
     run = [
-    'layout floating',
     'move-node-to-workspace Z',
-    '''exec-and-forget osascript -e '
-        delay 5
-        tell application "System Events"
-           	tell application process "zoom.us"
-          		if (count of windows) > 0 then
-         			tell window (count of windows)
-            				set value of attribute "AXMinimized" to true
-         			end tell
-          		end if
-           	end tell
-        end tell'''' ]
+    'layout floating',
+    'macos-native-minimize' ]
+
+[[on-window-detected]]
+    if.app-id = 'us.zoom.xos'
+    if.window-title-regex-substring = 'Zoom Meeing'
+    check-further-callbacks = false
+    run = [
+    'move-node-to-workspace Z',
+    'layout floating',
+    'macos-native-fullscreen' ]
 
 [[on-window-detected]]
     if.app-id = 'com.mitchellh.ghostty'
     check-further-callbacks = true
-    run = ['layout tiling', 'move-node-to-workspace G']
+    run = ['layout tiling', 'move-node-to-workspace T']
 
 [[on-window-detected]]
     if.app-id = 'com.linear'
     check-further-callbacks = true
-    run = ['layout tiling', 'move-node-to-workspace L']
+    run = ['layout tiling', 'move-node-to-workspace N']
 
 [[on-window-detected]]
     if.app-id = 'notion.id'
@@ -258,11 +262,37 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", 
     run = ['layout tiling', 'move-node-to-workspace N']
 
 [[on-window-detected]]
-    if.app-id = 'com.mitchellh.ghostty'
-    check-further-callbacks = true
-    run = ['layout tiling', 'move-node-to-workspace S']
-
-[[on-window-detected]]
     if.app-id = 'com.superhuman.electron'
     check-further-callbacks = true
     run = ['layout tiling', 'move-node-to-workspace M']
+
+[[on-window-detected]]
+    if.app-id = 'dev.zed.Zed'
+    check-further-callbacks = true
+    run = ['layout floating', 'move-node-to-workspace E']
+
+[[on-window-detected]]
+    if.app-id = 'com.pixelmatorteam.pixelmator.x'
+    check-further-callbacks = true
+    run = ['layout floating', 'move-node-to-workspace P']
+
+[[on-window-detected]]
+    if.app-id = 'com.stonelightpictures.Webcam-Effects-AS'
+    check-further-callbacks = true
+    run = ['layout floating', 'move-node-to-workspace V']
+
+[[on-window-detected]]
+    if.app-id = 'co.boomvision.boom.macos'
+    check-further-callbacks = true
+    run = ['layout floating', 'move-node-to-workspace V']
+
+[[on-window-detected]]
+    if.app-id = 'com.tinyspeck.slackmacgap'
+    check-further-callbacks = true
+    run = ['layout tiling', 'move-node-to-workspace 9']
+
+[[on-window-detected]]
+    if.app-id = 'co.boomvision.boom.macos'
+    if.window-title-regex-substring = 'Boom – Remote'
+    check-further-callbacks = true
+    run = ['layout floating', 'move-node-to-workspace T']

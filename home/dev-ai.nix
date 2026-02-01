@@ -55,8 +55,8 @@ let
 
     CWD_REAL="$(/bin/pwd -P 2>/dev/null || /bin/pwd)"
 
-    GH_TOKEN_VALUE=""
-    if command -v gh >/dev/null 2>&1; then
+    GH_TOKEN_VALUE="''${GH_TOKEN:-}"
+    if [ -z "$GH_TOKEN_VALUE" ] && command -v gh >/dev/null 2>&1; then
       GH_TOKEN_VALUE="$(gh auth token 2>/dev/null || true)"
     fi
     exec sudo -u ${codexUser} -H \
@@ -112,8 +112,8 @@ let
 
     CWD_REAL="$(/bin/pwd -P 2>/dev/null || /bin/pwd)"
 
-    GH_TOKEN_VALUE=""
-    if command -v gh >/dev/null 2>&1; then
+    GH_TOKEN_VALUE="''${GH_TOKEN:-}"
+    if [ -z "$GH_TOKEN_VALUE" ] && command -v gh >/dev/null 2>&1; then
       GH_TOKEN_VALUE="$(gh auth token 2>/dev/null || true)"
     fi
     exec sudo -u ${claudeUser} -H \
@@ -408,5 +408,7 @@ in
   security.sudo.extraConfig = ''
     ${primaryUser} ALL=(${claudeUser}) NOPASSWD: ${lib.getExe claudeAsUser}
     ${primaryUser} ALL=(${codexUser}) NOPASSWD: ${lib.getExe codexAsUser}
+    ${claudeUser} ALL=(${codexUser}) NOPASSWD: ALL
+    ${codexUser} ALL=(${claudeUser}) NOPASSWD: ALL
   '';
 }

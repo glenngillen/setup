@@ -15,7 +15,8 @@
     username = primaryUser;
     stateVersion = "25.05";
     sessionVariables = {
-      # shared environment variables
+      GOBIN = "$HOME/go/bin";
+      PATH = "$HOME/go/bin:$PATH";
     };
 
     # create .hushlogin file to suppress login messages
@@ -29,6 +30,7 @@
   };
   programs.zoxide = {
     enable = true;
+    enableZshIntegration = true;
   };
   programs.direnv = {
     enable = true;

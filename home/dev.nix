@@ -49,19 +49,14 @@
       "pinentry"
       "pinentry-mac"
       "procs" # ps replacement
-      "ripgrep" # grep replacement
       "sqlite"
       "starship"
       "xh" # curl alternative
-      "zoxide" # cd alternative
     ];
 
     casks = [
-      "cursor"
       "ghostty"
       "git-credential-manager"
-      "visual-studio-code"
-      "zed"
 
       "screenflow"
 
@@ -114,7 +109,10 @@
         "%" = " ";
       };
 
-      file.".config/zed/settings.json".source = ./configs/zed.settings.json;
+      sessionVariables = {
+        EDITOR = "zed";
+      };
+
       file.".config/fzf-git.sh".source = ./configs/fzf-git.sh;
       file."/Library/Application\ Support/com.mitchellh.ghostty/config".source = ./configs/ghostty.config;
     };
@@ -124,6 +122,104 @@
         initContent = "eval $(zoxide init zsh); source ~/.config/fzf-git.sh";
         shellAliases = {
           reload = ". ~/.zshenv && . ~/.zprofile && . ~/.zshrc";
+        };
+      };
+      go.enable = true;
+      ripgrep = {
+        enable = true;
+      };
+
+      zed-editor = {
+        enable = true;
+        # mutableUserSettings = true;
+        extensions = [
+          "html"
+          "toml"
+          "dockerfile"
+          "svelte"
+          "terraform"
+          "prisma"
+          "nix"
+          "opencode"
+          "docker-compose"
+        ];
+        userSettings = {
+          vim_mode = true;
+          buffer_font_family = "FiraCode Nerd Font Mono";
+          ui_font_size = 16;
+          buffer_font_size = 15;
+          active_pane_modifiers = {
+            border_size = 0.0;
+            inactive_opacity = 0.5;
+          };
+          bottom_dock_layout = "full";
+          auto_indent = true;
+          auto_indent_on_paste = true;
+          auto_install_extensions = {
+            html = true;
+            dockerfile = true;
+            docker-compose = true;
+            toml = true;
+            svelte = true;
+            terraform = true;
+            prisma = true;
+            nix = true;
+            catppuccin = true;
+            catppuccin-icons = true;
+            opencode = true;
+          };
+          theme = {
+            mode = "system";
+            light = "Catppuccin Latte";
+            dark = "Catppuccin Mocha";
+          };
+          icon_theme = {
+            mode = "system";
+            dark = "Catppuccin Mocha";
+            light = "Catppuccin Latte";
+          };
+          autosave = "off";
+          auto_signature_help = true;
+          close_on_file_delete = true;
+          confirm_quit = true;
+          current_line_highlight = "all";
+          selection_highlight = true;
+          hide_mouse = "on_typing_and_movement";
+          scrollbar = {
+            show = "auto";
+            cursors = true;
+            git_diff = true;
+            search_results = true;
+            selected_text = true;
+            selected_symbol = true;
+            diagnostics = "all";
+            axes = {
+              horizontal = true;
+              vertical = true;
+            };
+          };
+          git_diff = true;
+          tabs = {
+            close_position = "right";
+            file_icons = true;
+            git_status = true;
+            activate_on_close = "history";
+            show_close_button = "hover";
+            show_diagnostics = "off";
+          };
+          enable_language_server = true;
+          format_on_save = "on";
+          use_autoclose = true;
+          hard_tabs = false;
+          remove_trailing_whitespace_on_save = true;
+          restore_on_file_reopen = true;
+          restore_on_startup = "last_session";
+          container-use = {
+            source = "custom";
+            command = "container-use";
+            args = [ "stdio" ];
+            env = { };
+          };
         };
       };
     };
@@ -139,6 +235,6 @@
       enableFzfGit = true;
       enableFzfHistory = true;
     };
-  };
 
+  };
 }

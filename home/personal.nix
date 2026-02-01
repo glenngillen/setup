@@ -18,6 +18,7 @@
     casks = [
       "superhuman"
       "vlc"
+      "trader-workstation"
     ];
   };
 

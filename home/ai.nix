@@ -16,7 +16,6 @@
       "chatgpt"
       "claude"
 
-      "ollama"
       "ollama-app"
 
       "diffusionbee"

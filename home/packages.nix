@@ -9,8 +9,6 @@
       tmux
       htop
       tree
-      ripgrep
-      zoxide
 
       colima
 
