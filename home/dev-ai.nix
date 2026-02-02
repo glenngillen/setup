@@ -6,9 +6,9 @@
 }:
 let
   codexUser = "_codex";
-  codexHome = "/var/lib/codex";
+  codexHome = "/private/var/lib/codex";
   claudeUser = "_claude";
-  claudeHome = "/var/lib/claude";
+  claudeHome = "/private/var/lib/claude";
   gitName = "Glenn Gillen";
   gitEmail = "me@glenngillen.com";
 
@@ -290,12 +290,12 @@ in
   };
 
   system.activationScripts.codexHome.text = ''
-    mkdir -p /var/lib/codex/.config /var/lib/codex/.cache /var/lib/codex/.local/share
-    chmod 700 /var/lib/codex
+    mkdir -p ${codexHome}/.config ${codexHome}/.cache ${codexHome}/.local/share
+    chmod 700 ${codexHome}
   '';
   system.activationScripts.claudeHome.text = ''
-    mkdir -p /var/lib/claude/.config /var/lib/claude/.cache /var/lib/claude/.local/share
-    chmod 700 /var/lib/claude
+    mkdir -p ${claudeHome}/.config ${claudeHome}/.cache ${claudeHome}/.local/share
+    chmod 700 ${claudeHome}
   '';
 
   system.activationScripts.aiPermissions.text = ''

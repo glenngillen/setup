@@ -98,16 +98,14 @@
           lib.makeBinPath (
             with pkgs;
             [
-              mise
               git
               openssh
               git-lfs
+              go
             ]
           )
         }:$PATH"
         # Get the go binary path from mise and add it to PATH
-        GO_BIN_PATH=$(mise bin-paths | grep "/go/")
-        export PATH="$GO_BIN_PATH:$PATH"
 
         # Set GOBIN to a stable location that won't change with Go versions
         export GOBIN="$HOME/go/bin"
