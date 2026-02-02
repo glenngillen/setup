@@ -1,5 +1,29 @@
-{ primaryUser, pkgs, ... }:
 {
+  primaryUser,
+  pkgs,
+  inputs,
+  ...
+}:
+{
+  nixpkgs.overlays = [
+    (
+      final: prev:
+      let
+        pkgsGo = import inputs.nixpkgs-go {
+          system = prev.system;
+          config = prev.config;
+        };
+        pkgsZed = import inputs.nixpkgs-zed {
+          system = prev.system;
+          config = prev.config;
+        };
+      in
+      {
+        go = pkgsGo.go;
+        zed-editor = pkgsZed.zed-editor;
+      }
+    )
+  ];
   environment.systemPackages = with pkgs; [
     nixd
   ];
@@ -69,6 +93,12 @@
   };
   home-manager.users.${primaryUser} = {
     home = {
+
+      packages = [
+        pkgs.zed-editor
+        pkgs.go
+      ];
+
       shellAliases = {
         ls = "eza -Ahl --git";
         cat = "bat";
@@ -105,12 +135,15 @@
         # heroku
         hk = "heroku";
 
+        zed = "zeditor";
+
         # commands starting with % for pasting from web
         "%" = " ";
+
       };
 
       sessionVariables = {
-        EDITOR = "zed";
+        EDITOR = "zeditor";
       };
 
       file.".config/fzf-git.sh".source = ./configs/fzf-git.sh;
@@ -119,9 +152,10 @@
 
     programs = {
       zsh = {
+        enable = true;
         initContent = "eval $(zoxide init zsh); source ~/.config/fzf-git.sh";
         shellAliases = {
-          reload = ". ~/.zshenv && . ~/.zprofile && . ~/.zshrc";
+          reload = ". ~/.zshenv && . ~/.zshrc";
         };
       };
       go.enable = true;
@@ -131,7 +165,6 @@
 
       zed-editor = {
         enable = true;
-        # mutableUserSettings = true;
         extensions = [
           "html"
           "toml"
@@ -142,6 +175,9 @@
           "nix"
           "opencode"
           "docker-compose"
+          "catppuccin"
+          "catppuccin-icons"
+          "git-firefly"
         ];
         userSettings = {
           vim_mode = true;
@@ -167,6 +203,7 @@
             catppuccin = true;
             catppuccin-icons = true;
             opencode = true;
+            git-firefly = true;
           };
           theme = {
             mode = "system";
@@ -198,7 +235,6 @@
               vertical = true;
             };
           };
-          git_diff = true;
           tabs = {
             close_position = "right";
             file_icons = true;
@@ -214,12 +250,6 @@
           remove_trailing_whitespace_on_save = true;
           restore_on_file_reopen = true;
           restore_on_startup = "last_session";
-          container-use = {
-            source = "custom";
-            command = "container-use";
-            args = [ "stdio" ];
-            env = { };
-          };
         };
       };
     };
@@ -229,6 +259,7 @@
       enable = true;
     };
     zsh = {
+      enable = true;
       enableBashCompletion = true;
       enableCompletion = true;
       enableFzfCompletion = true;

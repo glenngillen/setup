@@ -4,6 +4,10 @@
     # monorepo w/ recipes ("derivations")
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
 
+    # pinned package sources for overlays
+    nixpkgs-go.url = "github:nixos/nixpkgs/a1bab9e494f5f4939442a57a58d0449a109593fe";
+    nixpkgs-zed.url = "github:nixos/nixpkgs/6308c3b21396534d8aaeac46179c14c439a89b8a";
+
     # manages configs
     home-manager.url = "github:nix-community/home-manager/master";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
