@@ -11,6 +11,17 @@ let
   claudeHome = "/private/var/lib/claude";
   gitName = "Glenn Gillen";
   gitEmail = "me@glenngillen.com";
+  primaryUserHome = "/Users/${primaryUser}";
+
+  # Shared toolchain PATH: mise shims, go bin, homebrew, and nix-darwin paths
+  toolchainPath = lib.concatStringsSep ":" [
+    "${primaryUserHome}/.local/share/mise/shims"
+    "${primaryUserHome}/go/bin"
+    "/opt/homebrew/bin"
+    "/opt/homebrew/sbin"
+    "/run/current-system/sw/bin"
+    "/etc/profiles/per-user/${primaryUser}/bin"
+  ];
 
   codexAsUser = pkgs.writeShellScriptBin "codex-as-codexuser" ''
     set -euo pipefail
@@ -39,6 +50,7 @@ let
     export GIT_CONFIG_COUNT=1
     export GIT_CONFIG_KEY_0=safe.directory
     export GIT_CONFIG_VALUE_0="$CWD"
+    export PATH="${toolchainPath}:$PATH"
     umask 0002
 
     if ! cd "$CWD" 2>/dev/null; then
@@ -94,6 +106,7 @@ let
     export GIT_CONFIG_KEY_0=safe.directory
     export GIT_CONFIG_VALUE_0="$CWD"
     export AWS_EC2_METADATA_DISABLED=true
+    export PATH="${toolchainPath}:$PATH"
     umask 0002
 
     if ! cd "$CWD" 2>/dev/null; then
@@ -323,6 +336,26 @@ in
     sudo chmod +a "group:aicoders allow read,execute,search" "$TMPDIR"
     sudo chmod +a "group:aicoders allow read,execute,search,file_inherit,directory_inherit" "$\{TMPDIR\}TemporaryItems"
     sudo chmod +a "group:aicoders allow search" /var/folders/
+
+    # Grant aicoders read/execute access to mise shims and go binaries
+    for d in /Users/${primaryUser}/.local \
+             /Users/${primaryUser}/.local/share \
+             /Users/${primaryUser}/.local/share/mise \
+             /Users/${primaryUser}/.local/share/mise/shims \
+             /Users/${primaryUser}/go \
+             /Users/${primaryUser}/go/bin; do
+      if [ -d "$d" ]; then
+        chmod +a "group:aicoders allow read,execute,search,readattr,readextattr,readsecurity" "$d" 2>/dev/null || true
+      fi
+    done
+
+    # Also grant access to mise installs directory (where the actual binaries live)
+    if [ -d "/Users/${primaryUser}/.local/share/mise/installs" ]; then
+      /usr/bin/find "/Users/${primaryUser}/.local/share/mise/installs" -type d \
+        -exec chmod +a "group:aicoders allow read,execute,search,readattr,readextattr,readsecurity" {} \; 2>/dev/null || true
+      /usr/bin/find "/Users/${primaryUser}/.local/share/mise/installs" -type f \
+        -exec chmod +a "group:aicoders allow read,execute,readattr,readextattr,readsecurity" {} \; 2>/dev/null || true
+    fi
   '';
 
   homebrew = {
