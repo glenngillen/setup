@@ -443,6 +443,7 @@ in
     };
 
   home-manager.users.${codexUser} = {
+    sops.age.sshKeyPaths = [];
     home = {
       stateVersion = "25.05";
       homeDirectory = codexHome;
