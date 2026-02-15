@@ -266,6 +266,9 @@ let
   '';
 in
 {
+  sops.age.keyFile = "/Users/${primaryUser}/.config/sops/age/keys.txt";
+  sops.age.sshKeyPaths = [];
+
   sops.secrets."CLAUDE_CODE_OAUTH_TOKEN" = {
     sopsFile = ../secrets/claude-oauth.env;
     format = "dotenv";
