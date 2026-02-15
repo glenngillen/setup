@@ -2,6 +2,7 @@
   pkgs,
   primaryUser,
   lib,
+  config,
   ...
 }:
 let
