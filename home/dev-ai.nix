@@ -307,6 +307,17 @@ in
   system.activationScripts.claudeHome.text = ''
     mkdir -p ${claudeHome}/.config ${claudeHome}/.cache ${claudeHome}/.local/share
     chmod 700 ${claudeHome}
+
+    # Create a login keychain for the service user so macOS doesn't show
+    # "Keychain Not Found" popups. Left locked so nothing writes to it;
+    # the tool falls back to file-based credential storage.
+    CLAUDE_KC="${claudeHome}/Library/Keychains/login.keychain-db"
+    if [ ! -f "$CLAUDE_KC" ]; then
+      mkdir -p "$(dirname "$CLAUDE_KC")"
+      sudo -u ${claudeUser} /usr/bin/security create-keychain -p "" "$CLAUDE_KC"
+      sudo -u ${claudeUser} /usr/bin/security default-keychain -s "$CLAUDE_KC"
+      /usr/bin/security lock-keychain "$CLAUDE_KC"
+    fi
   '';
 
   system.activationScripts.aiPermissions.text = ''
