@@ -94,8 +94,6 @@ let
     export GIT_CONFIG_KEY_0=safe.directory
     export GIT_CONFIG_VALUE_0="$CWD"
     export AWS_EC2_METADATA_DISABLED=true
-    export KEYCHAIN_DISABLE=1
-    export CLAUDE_NO_KEYCHAIN=1
     umask 0002
 
     if ! cd "$CWD" 2>/dev/null; then
