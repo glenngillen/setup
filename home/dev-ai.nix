@@ -50,6 +50,7 @@ let
     export GIT_CONFIG_COUNT=1
     export GIT_CONFIG_KEY_0=safe.directory
     export GIT_CONFIG_VALUE_0="$CWD"
+    export PATH="${toolchainPath}:$PATH"
     umask 0002
 
     if ! cd "$CWD" 2>/dev/null; then
