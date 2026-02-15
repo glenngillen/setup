@@ -94,8 +94,6 @@ let
     export GIT_CONFIG_KEY_0=safe.directory
     export GIT_CONFIG_VALUE_0="$CWD"
     export AWS_EC2_METADATA_DISABLED=true
-    export KEYCHAIN_DISABLE=1
-    export CLAUDE_NO_KEYCHAIN=1
     umask 0002
 
     if ! cd "$CWD" 2>/dev/null; then
@@ -292,10 +290,32 @@ in
   system.activationScripts.codexHome.text = ''
     mkdir -p ${codexHome}/.config ${codexHome}/.cache ${codexHome}/.local/share
     chmod 700 ${codexHome}
+
+    # Create a login keychain for the service user so macOS doesn't show
+    # "Keychain Not Found" popups. Left locked so nothing writes to it;
+    # the tool falls back to file-based credential storage.
+    CODEX_KC="${codexHome}/Library/Keychains/login.keychain-db"
+    if [ ! -f "$CODEX_KC" ]; then
+      mkdir -p "$(dirname "$CODEX_KC")"
+      sudo -u ${codexUser} /usr/bin/security create-keychain -p "" "$CODEX_KC"
+      sudo -u ${codexUser} /usr/bin/security default-keychain -s "$CODEX_KC"
+      /usr/bin/security lock-keychain "$CODEX_KC"
+    fi
   '';
   system.activationScripts.claudeHome.text = ''
     mkdir -p ${claudeHome}/.config ${claudeHome}/.cache ${claudeHome}/.local/share
     chmod 700 ${claudeHome}
+
+    # Create a login keychain for the service user so macOS doesn't show
+    # "Keychain Not Found" popups. Left locked so nothing writes to it;
+    # the tool falls back to file-based credential storage.
+    CLAUDE_KC="${claudeHome}/Library/Keychains/login.keychain-db"
+    if [ ! -f "$CLAUDE_KC" ]; then
+      mkdir -p "$(dirname "$CLAUDE_KC")"
+      sudo -u ${claudeUser} /usr/bin/security create-keychain -p "" "$CLAUDE_KC"
+      sudo -u ${claudeUser} /usr/bin/security default-keychain -s "$CLAUDE_KC"
+      /usr/bin/security lock-keychain "$CLAUDE_KC"
+    fi
   '';
 
   system.activationScripts.aiPermissions.text = ''
