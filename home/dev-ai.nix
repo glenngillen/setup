@@ -462,6 +462,7 @@ in
   };
 
   home-manager.users.${claudeUser} = {
+    sops.age.sshKeyPaths = [];
     home = {
       stateVersion = "25.05";
       homeDirectory = claudeHome;
