@@ -267,7 +267,7 @@ let
 in
 {
   sops.secrets."CLAUDE_CODE_OAUTH_TOKEN" = {
-    sopsFile = ./secrets/claude-oauth.env;
+    sopsFile = ../secrets/claude-oauth.env;
     format = "dotenv";
     owner = claudeUser;
     group = "aicoders";
