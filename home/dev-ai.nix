@@ -11,6 +11,17 @@ let
   claudeHome = "/private/var/lib/claude";
   gitName = "Glenn Gillen";
   gitEmail = "me@glenngillen.com";
+  primaryUserHome = "/Users/${primaryUser}";
+
+  # Shared toolchain PATH: mise shims, go bin, homebrew, and nix-darwin paths
+  toolchainPath = lib.concatStringsSep ":" [
+    "${primaryUserHome}/.local/share/mise/shims"
+    "${primaryUserHome}/go/bin"
+    "/opt/homebrew/bin"
+    "/opt/homebrew/sbin"
+    "/run/current-system/sw/bin"
+    "/etc/profiles/per-user/${primaryUser}/bin"
+  ];
 
   codexAsUser = pkgs.writeShellScriptBin "codex-as-codexuser" ''
     set -euo pipefail
