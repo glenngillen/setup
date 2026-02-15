@@ -2,6 +2,7 @@
   pkgs,
   primaryUser,
   lib,
+  config,
   ...
 }:
 let
@@ -107,6 +108,13 @@ let
     export GIT_CONFIG_VALUE_0="$CWD"
     export AWS_EC2_METADATA_DISABLED=true
     export PATH="${toolchainPath}:$PATH"
+
+    # Read OAuth token from sops-decrypted secret
+    OAUTH_SECRET="${config.sops.secrets."CLAUDE_CODE_OAUTH_TOKEN".path}"
+    if [ -r "$OAUTH_SECRET" ]; then
+      export CLAUDE_CODE_OAUTH_TOKEN="$(cat "$OAUTH_SECRET")"
+    fi
+
     umask 0002
 
     if ! cd "$CWD" 2>/dev/null; then
@@ -258,6 +266,14 @@ let
   '';
 in
 {
+  sops.secrets."CLAUDE_CODE_OAUTH_TOKEN" = {
+    sopsFile = ./secrets/claude-oauth.env;
+    format = "dotenv";
+    owner = claudeUser;
+    group = "aicoders";
+    mode = "0440";
+  };
+
   environment.systemPackages = with pkgs; [
     nixd
     codexScript
