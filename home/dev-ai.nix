@@ -336,6 +336,26 @@ in
     sudo chmod +a "group:aicoders allow read,execute,search" "$TMPDIR"
     sudo chmod +a "group:aicoders allow read,execute,search,file_inherit,directory_inherit" "$\{TMPDIR\}TemporaryItems"
     sudo chmod +a "group:aicoders allow search" /var/folders/
+
+    # Grant aicoders read/execute access to mise shims and go binaries
+    for d in /Users/${primaryUser}/.local \
+             /Users/${primaryUser}/.local/share \
+             /Users/${primaryUser}/.local/share/mise \
+             /Users/${primaryUser}/.local/share/mise/shims \
+             /Users/${primaryUser}/go \
+             /Users/${primaryUser}/go/bin; do
+      if [ -d "$d" ]; then
+        chmod +a "group:aicoders allow read,execute,search,readattr,readextattr,readsecurity" "$d" 2>/dev/null || true
+      fi
+    done
+
+    # Also grant access to mise installs directory (where the actual binaries live)
+    if [ -d "/Users/${primaryUser}/.local/share/mise/installs" ]; then
+      /usr/bin/find "/Users/${primaryUser}/.local/share/mise/installs" -type d \
+        -exec chmod +a "group:aicoders allow read,execute,search,readattr,readextattr,readsecurity" {} \; 2>/dev/null || true
+      /usr/bin/find "/Users/${primaryUser}/.local/share/mise/installs" -type f \
+        -exec chmod +a "group:aicoders allow read,execute,readattr,readextattr,readsecurity" {} \; 2>/dev/null || true
+    fi
   '';
 
   homebrew = {
