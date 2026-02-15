@@ -259,6 +259,14 @@ let
   '';
 in
 {
+  sops.secrets."CLAUDE_CODE_OAUTH_TOKEN" = {
+    sopsFile = ./secrets/claude-oauth.env;
+    format = "dotenv";
+    owner = claudeUser;
+    group = "aicoders";
+    mode = "0440";
+  };
+
   environment.systemPackages = with pkgs; [
     nixd
     codexScript
