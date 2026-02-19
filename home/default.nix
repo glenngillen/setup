@@ -42,7 +42,6 @@
 
   sops = {
     age.keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
-    age.sshKeyPaths = [];
     secrets."aws.config.infracost.ini" = {
       sopsFile = ../secrets/aws.config.infracost.ini;
       format = "ini";

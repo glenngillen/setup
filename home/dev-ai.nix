@@ -14,13 +14,13 @@ let
   gitEmail = "me@glenngillen.com";
   primaryUserHome = "/Users/${primaryUser}";
 
-  # Shared toolchain PATH: mise shims, go bin, homebrew, and nix-darwin paths
+  # Shared toolchain PATH: prioritize nix system packages, then homebrew
+  # Note: mise shims removed - using nix-installed languages instead
   toolchainPath = lib.concatStringsSep ":" [
-    "${primaryUserHome}/.local/share/mise/shims"
-    "${primaryUserHome}/go/bin"
+    "/run/current-system/sw/bin"           # System packages (nodejs, cargo, etc.)
+    "${primaryUserHome}/go/bin"            # Go binaries
     "/opt/homebrew/bin"
     "/opt/homebrew/sbin"
-    "/run/current-system/sw/bin"
     "/etc/profiles/per-user/${primaryUser}/bin"
   ];
 
@@ -109,10 +109,10 @@ let
     export AWS_EC2_METADATA_DISABLED=true
     export PATH="${toolchainPath}:$PATH"
 
-    # Read OAuth token from sops-decrypted secret
+    # Read OAuth token from sops-decrypted secret (dotenv format)
     OAUTH_SECRET="${config.sops.secrets."CLAUDE_CODE_OAUTH_TOKEN".path}"
     if [ -r "$OAUTH_SECRET" ]; then
-      export CLAUDE_CODE_OAUTH_TOKEN="$(cat "$OAUTH_SECRET")"
+      export CLAUDE_CODE_OAUTH_TOKEN="$(grep '^CLAUDE_CODE_OAUTH_TOKEN=' "$OAUTH_SECRET" | cut -d= -f2-)"
     fi
 
     umask 0002
@@ -266,15 +266,15 @@ let
   '';
 in
 {
-  sops.age.keyFile = "/Users/${primaryUser}/.config/sops/age/keys.txt";
-  sops.age.sshKeyPaths = [];
-
-  sops.secrets."CLAUDE_CODE_OAUTH_TOKEN" = {
-    sopsFile = ../secrets/claude-oauth.env;
-    format = "dotenv";
-    owner = claudeUser;
-    group = "aicoders";
-    mode = "0440";
+  sops = {
+    age.keyFile = "/Users/${primaryUser}/.config/sops/age/keys.txt";
+    secrets."CLAUDE_CODE_OAUTH_TOKEN" = {
+      sopsFile = ../secrets/claude-oauth.env;
+      format = "dotenv";
+      owner = claudeUser;
+      group = "aicoders";
+      mode = "0440";
+    };
   };
 
   environment.systemPackages = with pkgs; [
@@ -282,6 +282,17 @@ in
     codexScript
     claudeScript
     aicoderPerms
+
+    # Development languages and tools (available to all users including _claude/_codex)
+    nodejs_22  # or nodejs-slim if you don't need npm
+    bun
+    deno
+    cargo
+    rustc
+    rust-analyzer
+    python312
+    uv  # Python package manager
+    go
   ];
 
   users.knownUsers = [
@@ -351,30 +362,19 @@ in
   '';
 
   system.activationScripts.aiPermissions.text = ''
+    # Grant aicoders group basic access to traverse user home and system directories
     sudo chmod +a "group:aicoders allow search,readattr,readextattr,readsecurity" /Users/${primaryUser}
     sudo chmod +a "group:aicoders allow read,execute,search" "$TMPDIR"
     sudo chmod +a "group:aicoders allow read,execute,search,file_inherit,directory_inherit" "$\{TMPDIR\}TemporaryItems"
     sudo chmod +a "group:aicoders allow search" /var/folders/
 
-    # Grant aicoders read/execute access to mise shims and go binaries
-    for d in /Users/${primaryUser}/.local \
-             /Users/${primaryUser}/.local/share \
-             /Users/${primaryUser}/.local/share/mise \
-             /Users/${primaryUser}/.local/share/mise/shims \
-             /Users/${primaryUser}/go \
+    # Grant access to go binaries (if needed for project-installed tools)
+    for d in /Users/${primaryUser}/go \
              /Users/${primaryUser}/go/bin; do
       if [ -d "$d" ]; then
         chmod +a "group:aicoders allow read,execute,search,readattr,readextattr,readsecurity" "$d" 2>/dev/null || true
       fi
     done
-
-    # Also grant access to mise installs directory (where the actual binaries live)
-    if [ -d "/Users/${primaryUser}/.local/share/mise/installs" ]; then
-      /usr/bin/find "/Users/${primaryUser}/.local/share/mise/installs" -type d \
-        -exec chmod +a "group:aicoders allow read,execute,search,readattr,readextattr,readsecurity" {} \; 2>/dev/null || true
-      /usr/bin/find "/Users/${primaryUser}/.local/share/mise/installs" -type f \
-        -exec chmod +a "group:aicoders allow read,execute,readattr,readextattr,readsecurity" {} \; 2>/dev/null || true
-    fi
   '';
 
   homebrew = {
@@ -443,7 +443,7 @@ in
     };
 
   home-manager.users.${codexUser} = {
-    sops.age.sshKeyPaths = [];
+    sops.age.sshKeyPaths = [ ];
     home = {
       stateVersion = "25.05";
       homeDirectory = codexHome;
@@ -462,7 +462,7 @@ in
   };
 
   home-manager.users.${claudeUser} = {
-    sops.age.sshKeyPaths = [];
+    sops.age.sshKeyPaths = [ ];
     home = {
       stateVersion = "25.05";
       homeDirectory = claudeHome;
