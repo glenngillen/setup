@@ -17,8 +17,8 @@ let
   # Shared toolchain PATH: prioritize nix system packages, then homebrew
   # Note: mise shims removed - using nix-installed languages instead
   toolchainPath = lib.concatStringsSep ":" [
-    "/run/current-system/sw/bin"           # System packages (nodejs, cargo, etc.)
-    "${primaryUserHome}/go/bin"            # Go binaries
+    "/run/current-system/sw/bin" # System packages (nodejs, cargo, etc.)
+    "${primaryUserHome}/go/bin" # Go binaries
     "/opt/homebrew/bin"
     "/opt/homebrew/sbin"
     "/etc/profiles/per-user/${primaryUser}/bin"
@@ -51,7 +51,7 @@ let
     export GIT_CONFIG_COUNT=1
     export GIT_CONFIG_KEY_0=safe.directory
     export GIT_CONFIG_VALUE_0="$CWD"
-    export PATH="${toolchainPath}:$PATH"
+    export PATH="${codexHome}/.local/bin:${toolchainPath}:$PATH"
     umask 0002
 
     if ! cd "$CWD" 2>/dev/null; then
@@ -84,11 +84,13 @@ let
 
     CWD="/tmp"
     GH_TOKEN_VALUE=""
+    TOKEN_PROFILE="default"
 
     while [ "$#" -gt 0 ]; do
       case "$1" in
         --cwd) CWD="$2"; shift 2 ;;
         --gh-token) GH_TOKEN_VALUE="$2"; shift 2 ;;
+        --token-profile) TOKEN_PROFILE="$2"; shift 2 ;;
         --) shift; break ;;
         *) break ;;
       esac
@@ -107,12 +109,29 @@ let
     export GIT_CONFIG_KEY_0=safe.directory
     export GIT_CONFIG_VALUE_0="$CWD"
     export AWS_EC2_METADATA_DISABLED=true
-    export PATH="${toolchainPath}:$PATH"
+    export PATH="${claudeHome}/.local/bin:${toolchainPath}:$PATH"
 
-    # Read OAuth token from sops-decrypted secret (dotenv format)
-    OAUTH_SECRET="${config.sops.secrets."CLAUDE_CODE_OAUTH_TOKEN".path}"
+    # Select OAuth token and config directory based on profile
+    case "$TOKEN_PROFILE" in
+      default)
+        OAUTH_SECRET="${config.sops.secrets."CLAUDE_CODE_OAUTH_TOKEN".path}"
+        ;;
+      infracost)
+        OAUTH_SECRET="${config.sops.secrets."CLAUDE_CODE_OAUTH_TOKEN_INFRACOST".path}"
+        export CLAUDE_CONFIG_DIR="${claudeHome}/.claude-infracost"
+        ;;
+      *)
+        echo "claude: unknown token profile: $TOKEN_PROFILE" >&2
+        echo "       available profiles: default, infracost" >&2
+        exit 1
+        ;;
+    esac
+
     if [ -r "$OAUTH_SECRET" ]; then
       export CLAUDE_CODE_OAUTH_TOKEN="$(grep '^CLAUDE_CODE_OAUTH_TOKEN=' "$OAUTH_SECRET" | cut -d= -f2-)"
+    else
+      echo "claude: cannot read OAuth secret for profile '$TOKEN_PROFILE'" >&2
+      exit 1
     fi
 
     umask 0002
@@ -135,11 +154,23 @@ let
     if [ -z "$GH_TOKEN_VALUE" ] && command -v gh >/dev/null 2>&1; then
       GH_TOKEN_VALUE="$(gh auth token 2>/dev/null || true)"
     fi
+
+    TOKEN_PROFILE="default"
+    PASSTHROUGH_ARGS=()
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --as=*) TOKEN_PROFILE="''${1#--as=}"; shift ;;
+        --as)   TOKEN_PROFILE="$2"; shift 2 ;;
+        *)      PASSTHROUGH_ARGS+=("$1"); shift ;;
+      esac
+    done
+
     exec sudo -u ${claudeUser} -H \
       ${lib.getExe claudeAsUser} \
       --cwd "$CWD_REAL" \
       --gh-token "$GH_TOKEN_VALUE" \
-      -- "$@"
+      --token-profile "$TOKEN_PROFILE" \
+      -- "''${PASSTHROUGH_ARGS[@]}"
   '';
 
   aicoderPerms = pkgs.writeShellScriptBin "aicoder-perms" ''
@@ -163,12 +194,12 @@ let
     fi
     USER_HOME="/Users/$INVOKER"
 
-    ACL_PARENT_TRAVERSE="group:''${GROUP} allow search,readattr,readextattr,readsecurity"
-
-    # Strong collaborative ACLs for the shared trees.
-    # - directory_inherit/file_inherit ensures new children get these permissions.
-    ACL_DIR_COLLAB="group:''${GROUP} allow read,write,execute,delete,add_file,add_subdirectory,file_inherit,directory_inherit"
-    ACL_FILE_COLLAB="group:''${GROUP} allow read,write,execute"
+    # Full collaborative ACL string. All three variables use the same value:
+    # macOS ignores inheritance flags (file_inherit/directory_inherit) on files,
+    # so a single ACL string works for both files and directories.
+    ACL_PARENT_TRAVERSE="group:''${GROUP} allow append,list,add_file,search,delete,add_subdirectory,delete_child,readattr,writeattr,readextattr,writeextattr,read,write,execute,file_inherit,directory_inherit"
+    ACL_DIR_COLLAB="group:''${GROUP} allow append,list,add_file,search,delete,add_subdirectory,delete_child,readattr,writeattr,readextattr,writeextattr,read,write,execute,file_inherit,directory_inherit"
+    ACL_FILE_COLLAB="group:''${GROUP} allow append,list,add_file,search,delete,add_subdirectory,delete_child,readattr,writeattr,readextattr,writeextattr,read,write,execute,file_inherit,directory_inherit"
 
     ensure_parent_acls() {
       echo "Checking parent directory ACLs..."
@@ -203,30 +234,14 @@ let
     ensure_collab_acls() {
       local root="$1"
 
-      # Add the dir-collab ACL to the root directory (inherited by children).
-      if [ -d "$root" ]; then
-        if ! /bin/ls -lde "$root" 2>/dev/null | /usr/bin/grep -qE "group:''${GROUP} allow .*file_inherit"; then
-          /bin/chmod +a "$ACL_DIR_COLLAB" "$root" || true
-        fi
-      fi
-
-      # Ensure all subdirectories have at least the inherited directory ACL too.
-      /usr/bin/find "$root" -type d -print0 | /usr/bin/xargs -0 -I{} /bin/sh -lc '
-        d="$1"
-        if ! /bin/ls -lde "$d" 2>/dev/null | /usr/bin/grep -qE "group:'"''${GROUP}"' allow .*file_inherit"; then
-          echo "Fixing ACLs on $d"
-          /bin/chmod +a "'"$ACL_DIR_COLLAB"'" "$d" || true
-        fi
-      ' sh {}
-
-      # For existing files, add a non-inherited ACL so current files become editable/executable by group.
-      /usr/bin/find "$root" -type f -print0 | /usr/bin/xargs -0 -I{} /bin/sh -lc '
-        f="$1"
-        if ! /bin/ls -le "$f" 2>/dev/null | /usr/bin/grep -qE "group:'"''${GROUP}"' allow .*read"; then
-          echo "Fixing ACLs on $f"
-          /bin/chmod +a "'"$ACL_FILE_COLLAB"'" "$f" || true
-        fi
-      ' sh {}
+      # Apply ACLs unconditionally to all items. chmod +a is idempotent —
+      # macOS merges permissions into existing ACEs for the same group and
+      # won't create duplicate entries. This handles both items with no ACL
+      # and items with partial inherited ACLs (e.g. directories created by
+      # _codex/_claude that inherit a reduced permission set).
+      echo "Applying ACLs..."
+      /usr/bin/find "$root" -type d -exec /bin/chmod +a "$ACL_DIR_COLLAB" {} +
+      /usr/bin/find "$root" -type f -exec /bin/chmod +a "$ACL_FILE_COLLAB" {} +
     }
 
     # Validate
@@ -244,17 +259,13 @@ let
       git config --global --add safe.directory "$abs/*x"
     done
 
-    # Group ownership + mode bits
-    echo "Updating group ownership..."
-    /usr/sbin/chown -R ":''${GROUP}" "$@"
-    /bin/chmod -R g+rwX "$@"
-
-    # setgid on directories so new children inherit group
+    # Fix group ownership, mode bits, and setgid.
+    # Only items that fail a check are touched — a second run is a no-op.
+    echo "Checking ownership, mode bits, and setgid..."
     for path in "$@"; do
-      if [ -d "$path" ]; then
-        echo "Setting setgid on directories..."
-        /usr/bin/find . -type d \! -perm -g+s -exec /bin/chmod g+s {} +
-      fi
+      /usr/bin/find "$path" \! -group "''${GROUP}" -exec /usr/sbin/chown ":''${GROUP}" {} +
+      /usr/bin/find "$path" -type d \( \! -perm -g+rwx -o \! -perm -g+s \) -exec /bin/chmod g+rwxs {} +
+      /usr/bin/find "$path" -type f \! -perm -g+rw -exec /bin/chmod g+rw {} +
     done
 
     # ACLs for collaborative access (existing + future)
@@ -275,6 +286,13 @@ in
       group = "aicoders";
       mode = "0440";
     };
+    secrets."CLAUDE_CODE_OAUTH_TOKEN_INFRACOST" = {
+      sopsFile = ../secrets/claude-oauth-infracost.env;
+      format = "dotenv";
+      owner = claudeUser;
+      group = "aicoders";
+      mode = "0440";
+    };
   };
 
   environment.systemPackages = with pkgs; [
@@ -284,14 +302,14 @@ in
     aicoderPerms
 
     # Development languages and tools (available to all users including _claude/_codex)
-    nodejs_22  # or nodejs-slim if you don't need npm
+    nodejs_22 # or nodejs-slim if you don't need npm
     bun
     deno
     cargo
     rustc
     rust-analyzer
     python312
-    uv  # Python package manager
+    uv # Python package manager
     go
   ];
 
@@ -331,7 +349,7 @@ in
   };
 
   system.activationScripts.codexHome.text = ''
-    mkdir -p ${codexHome}/.config ${codexHome}/.cache ${codexHome}/.local/share
+    mkdir -p ${codexHome}/.config ${codexHome}/.cache ${codexHome}/.local/share ${codexHome}/.local/bin
     chmod 700 ${codexHome}
 
     # Create a login keychain for the service user so macOS doesn't show
@@ -346,7 +364,7 @@ in
     fi
   '';
   system.activationScripts.claudeHome.text = ''
-    mkdir -p ${claudeHome}/.config ${claudeHome}/.cache ${claudeHome}/.local/share
+    mkdir -p ${claudeHome}/.config ${claudeHome}/.cache ${claudeHome}/.local/share ${claudeHome}/.local/bin ${claudeHome}/.claude-infracost
     chmod 700 ${claudeHome}
 
     # Create a login keychain for the service user so macOS doesn't show
@@ -363,7 +381,6 @@ in
 
   system.activationScripts.aiPermissions.text = ''
     # Grant aicoders group basic access to traverse user home and system directories
-    sudo chmod +a "group:aicoders allow search,readattr,readextattr,readsecurity" /Users/${primaryUser}
     sudo chmod +a "group:aicoders allow read,execute,search" "$TMPDIR"
     sudo chmod +a "group:aicoders allow read,execute,search,file_inherit,directory_inherit" "$\{TMPDIR\}TemporaryItems"
     sudo chmod +a "group:aicoders allow search" /var/folders/
