@@ -41,7 +41,6 @@
 
       "colima"
 
-      "infracost"
       "tilt"
       "hashicorp/tap/terraform"
     ];

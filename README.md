@@ -4,7 +4,7 @@ Uses nix, flakes, nix-darwin, Home Manager, and Mise to setup my macOS machine(s
 
 ## Prerequisites
 
-* [Install Nix](https://docs.determinate.systems/#products) (download the graphical installer for macOS). After installation, restart your terminal.
+- [Install Nix](https://docs.determinate.systems/#products) (download the graphical installer for macOS). After installation, restart your terminal.
 
 ## Quick Start
 
@@ -25,6 +25,28 @@ darwin-rebuild switch --flake .#my-macbook
 nix-switch
 ```
 
+## FlakeHub Cache Authentication
+
+This configuration uses the [Determinate Nix](https://determinate.systems) installer, which includes the FlakeHub binary cache. If you see `HTTP error 401` warnings during rebuild:
+
+```
+warning: unable to download 'https://cache.flakehub.com/nix-cache-info': HTTP error 401
+```
+
+Your FlakeHub token has expired. Re-authenticate:
+
+```bash
+determinate-nixd login
+```
+
+You can check your current auth status with:
+
+```bash
+determinate-nixd status
+```
+
+This is non-blocking — builds will fall back to building from source — but re-authenticating restores faster cached builds.
+
 ## Managing Claude Code OAuth Token
 
 The Claude Code CLI runs as a separate `_claude` user and uses an OAuth token stored in an encrypted secrets file.
@@ -38,12 +60,14 @@ The Claude Code CLI runs as a separate `_claude` user and uses an OAuth token st
 ### Updating the Encrypted Secret
 
 1. Edit the plaintext secrets file temporarily:
+
    ```bash
    # Create/edit with your new token
    echo "CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-YOUR_TOKEN_HERE" > secrets/claude-oauth.env
    ```
 
 2. Encrypt the file with sops:
+
    ```bash
    nix run nixpkgs#sops -- --encrypt --input-type dotenv --output-type dotenv secrets/claude-oauth.env > /tmp/encrypted.env
    mv /tmp/encrypted.env secrets/claude-oauth.env
@@ -61,11 +85,13 @@ The encrypted secret will be decrypted at runtime to `/run/secrets/CLAUDE_CODE_O
 If you get "Invalid bearer token" errors:
 
 1. Verify the decrypted secret exists and has correct permissions:
+
    ```bash
    ls -la /run/secrets/CLAUDE_CODE_OAUTH_TOKEN
    ```
 
 2. Check the token value (first 60 chars):
+
    ```bash
    cat /run/secrets/CLAUDE_CODE_OAUTH_TOKEN | head -c 60
    ```

@@ -258,6 +258,12 @@ exec-on-workspace-change = ['/bin/bash', '-c',
 
 [[on-window-detected]]
     if.app-id = 'notion.id'
+    if.window-title-regex-substring = 'Notion – The all-in-one workspace for your notes, tasks, wikis, and databases.'
+    check-further-callbacks = false
+    run = ['layout floating']
+
+[[on-window-detected]]
+    if.app-id = 'notion.id'
     if.app-name-regex-substring = 'Notion'
     check-further-callbacks = true
     run = ['layout tiling', 'move-node-to-workspace N']
@@ -284,6 +290,12 @@ exec-on-workspace-change = ['/bin/bash', '-c',
 
 [[on-window-detected]]
     if.app-id = 'co.boomvision.boom.macos'
+    if.window-title-regex-substring = 'Boom – Remote'
+    check-further-callbacks = false
+    run = ['layout floating']
+
+[[on-window-detected]]
+    if.app-id = 'co.boomvision.boom.macos'
     check-further-callbacks = true
     run = ['layout floating', 'move-node-to-workspace V']
 
@@ -291,9 +303,3 @@ exec-on-workspace-change = ['/bin/bash', '-c',
     if.app-id = 'com.tinyspeck.slackmacgap'
     check-further-callbacks = true
     run = ['layout tiling', 'move-node-to-workspace 9']
-
-[[on-window-detected]]
-    if.app-id = 'co.boomvision.boom.macos'
-    if.window-title-regex-substring = 'Boom – Remote'
-    check-further-callbacks = true
-    run = ['layout floating', 'move-node-to-workspace T']
