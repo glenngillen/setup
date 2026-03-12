@@ -239,7 +239,7 @@ exec-on-workspace-change = ['/bin/bash', '-c',
 
 [[on-window-detected]]
     if.app-id = 'us.zoom.xos'
-    if.window-title-regex-substring = 'Zoom Meeing'
+    if.window-title-regex-substring = 'Zoom Meeting'
     check-further-callbacks = false
     run = [
     'move-node-to-workspace Z',
@@ -258,6 +258,7 @@ exec-on-workspace-change = ['/bin/bash', '-c',
 
 [[on-window-detected]]
     if.app-id = 'notion.id'
+    if.app-name-regex-substring = 'Notion'
     check-further-callbacks = true
     run = ['layout tiling', 'move-node-to-workspace N']
 
