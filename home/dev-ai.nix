@@ -134,6 +134,25 @@ let
       exit 1
     fi
 
+    # Pre-seed hasCompletedOnboarding in alternate config dirs to skip the login/onboarding flow
+    if [ -n "''${CLAUDE_CONFIG_DIR:-}" ]; then
+        mkdir -p "$CLAUDE_CONFIG_DIR"
+        CLAUDE_JSON="$CLAUDE_CONFIG_DIR/.claude.json"
+        if [ ! -f "$CLAUDE_JSON" ]; then
+            echo '{"hasCompletedOnboarding":true}' > "$CLAUDE_JSON"
+        elif ! grep -q '"hasCompletedOnboarding"' "$CLAUDE_JSON"; then
+            python3 -c "
+        import json, sys
+        path = sys.argv[1]
+        with open(path) as f:
+            d = json.load(f)
+        d['hasCompletedOnboarding'] = True
+        with open(path, 'w') as f:
+            json.dump(d, f, indent=2)
+        " "$CLAUDE_JSON"
+        fi
+    fi
+
     umask 0002
 
     if ! cd "$CWD" 2>/dev/null; then
@@ -415,6 +434,7 @@ in
       "bd"
       "devcontainer"
       "opencode"
+      "dolt"
     ];
 
     casks = [
