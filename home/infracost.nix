@@ -33,6 +33,12 @@
       "notion-calendar"
       "linear-linear"
       "loom"
+
+      "visual-studio-code"
+      "intellij-idea"
+      "windsurf"
+      "cursor"
+      "antigravity"
     ];
     brews = [
       "awscli"
