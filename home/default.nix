@@ -1,4 +1,5 @@
 {
+  pkgs,
   primaryUser,
   config,
   ...
@@ -33,8 +34,7 @@
     enableZshIntegration = true;
   };
   programs.direnv = {
-    enable = true;
-    nix-direnv.enable = true;
+    enable = false;
   };
   programs.ssh = {
     enable = true;

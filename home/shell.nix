@@ -5,6 +5,11 @@ _: {
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
 
+    initContent = ''
+      eval "$(direnv hook zsh)"
+      eval "$(mise activate zsh)"
+    '';
+
     shellAliases = {
       la = "ls -la";
       ".." = "cd ..";

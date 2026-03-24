@@ -2,14 +2,14 @@
 {
   programs.git = {
     enable = true;
-    userName = "Glenn Gillen";
-    userEmail = "github@gln.io";
 
     lfs.enable = true;
 
     ignores = [ "**/.DS_STORE" ];
 
-    extraConfig = {
+    settings = {
+      user.name = "Glenn Gillen";
+      user.email = "github@gln.io";
       github = {
         user = primaryUser;
       };

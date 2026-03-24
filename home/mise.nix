@@ -1,14 +1,7 @@
 { pkgs, lib, ... }:
 {
   programs.mise = {
-    enable = true;
-    enableZshIntegration = true;
-
-    settings = {
-      experimental = true;
-      verbose = false;
-      auto_install = true;
-    };
+    enable = false;
   };
 
   home.extraActivationPath = with pkgs; [
@@ -17,17 +10,18 @@
 
   # activation script to set up mise configuration
   home.activation.setupMise = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    # PATH="${pkgs.curl}/bin:$PATH"
+    MISE="/opt/homebrew/bin/mise"
+    if [ -x "$MISE" ]; then
+      # enable corepack (pnpm, yarn, etc.)
+      "$MISE" set MISE_NODE_COREPACK=true
 
-    # enable corepack (pnpm, yarn, etc.)
-    ${pkgs.mise}/bin/mise set MISE_NODE_COREPACK=true
+      # disable warning about */.node-version files
+      "$MISE" settings add idiomatic_version_file_enable_tools "[]"
 
-    # disable warning about */.node-version files
-    ${pkgs.mise}/bin/mise settings add idiomatic_version_file_enable_tools "[]"
-
-    # set global tool versions (auto_install will handle installation)
-    ${pkgs.mise}/bin/mise use --global node@lts
-    ${pkgs.mise}/bin/mise use --global bun@latest
-    ${pkgs.mise}/bin/mise use --global uv@latest
+      # set global tool versions (auto_install will handle installation)
+      "$MISE" use --global node@lts
+      "$MISE" use --global bun@latest
+      "$MISE" use --global uv@latest
+    fi
   '';
 }

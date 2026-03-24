@@ -12,9 +12,6 @@
 
       colima
 
-      # programming languages
-      mise # node, deno, bun, rust, python, etc.
-
       # misc
       nil
       biome

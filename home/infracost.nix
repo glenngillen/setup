@@ -39,6 +39,8 @@
       "windsurf"
       "cursor"
       "antigravity"
+
+      "claude-code"
     ];
     brews = [
       "awscli"
@@ -58,6 +60,10 @@
       programs = {
         zsh = {
           initContent = ''
+            export GOPROXY=direct
+            export GOPRIVATE=github.com/infracost/*
+            export GONOSUMDB=github.com/infracost/*
+
             function aws() {
               if [[ $1 == "login" ]]; then
                 shift # Remove the 'login' argument
@@ -71,10 +77,7 @@
       };
       programs.git = {
         enable = true;
-        # ...
-        extraConfig = {
-
-        };
+        settings = { };
       };
       home.activation.infra = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         PATH="${
@@ -97,6 +100,12 @@
             aws eks update-kubeconfig --name prod --profile=infracost-prod --kubeconfig kubeconfig_prod
         fi
 
+      '';
+      home.activation.claudeInfracost = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        if command -v claude >/dev/null 2>&1; then
+          claude plugin marketplace add infracost/agent-skills
+          claude plugin install infracost@infracost
+        fi
       '';
       home.activation.ic = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         PATH="${
@@ -121,10 +130,9 @@
         export GIT_CONFIG_COUNT=1
         export GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa"
 
-        go env -w GOPROXY=direct
-        go env -w GOPRIVATE=github.com/infracost/*
-        go env -w GONOSUMDB=github.com/infracost/*
-        go clean -modcache
+        export GOPROXY=direct
+        export GOPRIVATE=github.com/infracost/*
+        export GONOSUMDB=github.com/infracost/*
 
         if ! command -v ic >/dev/null 2>&1
         then

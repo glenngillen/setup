@@ -29,11 +29,13 @@ let
 
     CWD="/tmp"
     GH_TOKEN_VALUE=""
+    CARGO_TARGET_DIR_VALUE=""
 
     while [ "$#" -gt 0 ]; do
       case "$1" in
         --cwd) CWD="$2"; shift 2 ;;
         --gh-token) GH_TOKEN_VALUE="$2"; shift 2 ;;
+        --cargo-target-dir) CARGO_TARGET_DIR_VALUE="$2"; shift 2 ;;
         --) shift; break ;;
         *) break ;;
       esac
@@ -48,10 +50,11 @@ let
     export LANG="''${LANG:-}"
     export LC_ALL="''${LC_ALL:-}"
     export GH_TOKEN="$GH_TOKEN_VALUE"
+    export CARGO_TARGET_DIR="$CARGO_TARGET_DIR_VALUE"
     export GIT_CONFIG_COUNT=1
     export GIT_CONFIG_KEY_0=safe.directory
     export GIT_CONFIG_VALUE_0="$CWD"
-    export PATH="${codexHome}/.local/bin:${toolchainPath}:$PATH"
+    export PATH="${codexHome}/.cargo/bin:${codexHome}/.local/bin:${toolchainPath}:$PATH"
     umask 0002
 
     if ! cd "$CWD" 2>/dev/null; then
@@ -76,6 +79,7 @@ let
       ${lib.getExe codexAsUser} \
       --cwd "$CWD_REAL" \
       --gh-token "$GH_TOKEN_VALUE" \
+      --cargo-target-dir "''${CARGO_TARGET_DIR:-}" \
       -- "$@"
   '';
 
@@ -85,12 +89,14 @@ let
     CWD="/tmp"
     GH_TOKEN_VALUE=""
     TOKEN_PROFILE="default"
+    CARGO_TARGET_DIR_VALUE=""
 
     while [ "$#" -gt 0 ]; do
       case "$1" in
         --cwd) CWD="$2"; shift 2 ;;
         --gh-token) GH_TOKEN_VALUE="$2"; shift 2 ;;
         --token-profile) TOKEN_PROFILE="$2"; shift 2 ;;
+        --cargo-target-dir) CARGO_TARGET_DIR_VALUE="$2"; shift 2 ;;
         --) shift; break ;;
         *) break ;;
       esac
@@ -105,11 +111,12 @@ let
     export LANG="''${LANG:-}"
     export LC_ALL="''${LC_ALL:-}"
     export GH_TOKEN="$GH_TOKEN_VALUE"
+    export CARGO_TARGET_DIR="$CARGO_TARGET_DIR_VALUE"
     export GIT_CONFIG_COUNT=1
     export GIT_CONFIG_KEY_0=safe.directory
     export GIT_CONFIG_VALUE_0="$CWD"
     export AWS_EC2_METADATA_DISABLED=true
-    export PATH="${claudeHome}/.local/bin:${toolchainPath}:$PATH"
+    export PATH="${claudeHome}/.cargo/bin:${claudeHome}/.local/bin:${toolchainPath}:$PATH"
 
     # Select OAuth token and config directory based on profile
     case "$TOKEN_PROFILE" in
@@ -189,6 +196,7 @@ let
       --cwd "$CWD_REAL" \
       --gh-token "$GH_TOKEN_VALUE" \
       --token-profile "$TOKEN_PROFILE" \
+      --cargo-target-dir "''${CARGO_TARGET_DIR:-}" \
       -- "''${PASSTHROUGH_ARGS[@]}"
   '';
 
@@ -461,7 +469,6 @@ in
             ]
           )
         }:$PATH"
-        claude mcp add --scope user container-use -- container-use stdio
       '';
 
       programs.zsh.initContent = ''
@@ -487,10 +494,18 @@ in
     };
     programs.git = {
       enable = true;
-      extraConfig = {
+      settings = {
         init.defaultBranch = "main";
         user.name = gitName;
         user.email = gitEmail;
+        "credential \"https://github.com\"".helper = [
+          ""
+          "!/opt/homebrew/bin/gh auth git-credential"
+        ];
+        "credential \"https://gist.github.com\"".helper = [
+          ""
+          "!/opt/homebrew/bin/gh auth git-credential"
+        ];
       };
     };
     programs.tmux = {
@@ -506,10 +521,18 @@ in
     };
     programs.git = {
       enable = true;
-      extraConfig = {
+      settings = {
         init.defaultBranch = "main";
         user.name = gitName;
         user.email = gitEmail;
+        "credential \"https://github.com\"".helper = [
+          ""
+          "!/opt/homebrew/bin/gh auth git-credential"
+        ];
+        "credential \"https://gist.github.com\"".helper = [
+          ""
+          "!/opt/homebrew/bin/gh auth git-credential"
+        ];
       };
     };
     programs.tmux = {

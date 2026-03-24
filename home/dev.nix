@@ -54,6 +54,8 @@
     brews = [
       "aws-shell"
       "awscli"
+      "direnv"
+      "mise"
       "bandwhich"
       "bat" # cat replacement
       "bottom" # top/htop replacement
