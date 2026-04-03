@@ -7,7 +7,6 @@ _: {
 
     initContent = ''
       eval "$(direnv hook zsh)"
-      eval "$(mise activate zsh)"
     '';
 
     shellAliases = {
@@ -22,7 +21,26 @@ _: {
     settings = {
       add_newline = false;
       scan_timeout = 10;
-      format = "$all";
+      format = builtins.concatStringsSep "" [
+        "$directory"
+        "$git_branch"
+        "$git_status"
+        "$git_metrics"
+        "$cmd_duration"
+        "$line_break"
+        # languages / tools
+        "$nix_shell"
+        "$golang"
+        "$nodejs"
+        "$python"
+        "$terraform"
+        "$rust"
+        "$ruby"
+        "$swift"
+        "$docker_context"
+        "$aws"
+        "$character"
+      ];
 
       character = {
         success_symbol = "[➜](bold green)";

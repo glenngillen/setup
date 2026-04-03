@@ -34,6 +34,7 @@
     user = primaryUser;
     enable = true;
     autoMigrate = true;
+    enableZshIntegration = false;
   };
 
   # home-manager config

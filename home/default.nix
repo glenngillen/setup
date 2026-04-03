@@ -9,7 +9,7 @@
     ./packages.nix
     ./git.nix
     ./shell.nix
-    ./mise.nix
+
   ];
 
   home = {

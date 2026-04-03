@@ -27,5 +27,16 @@
     "OTEL_METRICS_EXPORTER": "otlp",
     "OTEL_EXPORTER_OTLP_METRICS_PROTOCOL": "http/json",
     "OTEL_EXPORTER_OTLP_PROTOCOL": "http/json"
+  },
+  "enabledPlugins": {
+    "swift-lsp@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "synapse": {
+      "source": {
+        "source": "directory",
+        "path": "/Users/gg/Development/personal/synapse/.claude-marketplace"
+      }
+    }
   }
 }

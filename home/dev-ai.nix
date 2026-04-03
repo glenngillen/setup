@@ -15,7 +15,6 @@ let
   primaryUserHome = "/Users/${primaryUser}";
 
   # Shared toolchain PATH: prioritize nix system packages, then homebrew
-  # Note: mise shims removed - using nix-installed languages instead
   toolchainPath = lib.concatStringsSep ":" [
     "/run/current-system/sw/bin" # System packages (nodejs, cargo, etc.)
     "${primaryUserHome}/go/bin" # Go binaries
@@ -338,6 +337,17 @@ in
     python312
     uv # Python package manager
     go
+
+    # Language servers
+    typescript-language-server
+    typescript
+    pyright
+    gopls
+    ruby-lsp
+    bash-language-server
+    svelte-language-server
+    terraform-ls
+    astro-language-server
   ];
 
   users.knownUsers = [
@@ -435,20 +445,18 @@ in
 
     taps = [
       "dagger/tap"
-      "steveyegge/beads"
     ];
 
     brews = [
-      "bd"
       "devcontainer"
       "opencode"
-      "dolt"
     ];
 
     casks = [
       "container-use"
       "claude-code"
       "codex"
+      "copilot-cli"
     ];
 
     masApps = { };
@@ -471,16 +479,6 @@ in
         }:$PATH"
       '';
 
-      programs.zsh.initContent = ''
-        # Put nix-darwin bins first (mise/brew often prepend themselves)
-        path=(/run/current-system/sw/bin /etc/profiles/per-user/${primaryUser}/bin $path)
-
-        # Remove duplicates and sync PATH correctly (colon-separated)
-        typeset -U path
-        export PATH="''${(j/:/)path}"
-
-        hash -r
-      '';
       programs.tmux = {
         enable = true;
       };

@@ -27,7 +27,7 @@
       "microsoft-teams"
       "tailscale-app"
       "google-chrome"
-      "ngrok"
+      # "ngrok"
 
       "notion"
       "notion-calendar"
@@ -119,8 +119,6 @@
             ]
           )
         }:$PATH"
-        # Get the go binary path from mise and add it to PATH
-
         # Set GOBIN to a stable location that won't change with Go versions
         export GOBIN="$HOME/go/bin"
         export PATH="$GOBIN:$PATH"
