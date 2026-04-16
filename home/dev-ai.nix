@@ -14,10 +14,50 @@ let
   gitEmail = "me@glenngillen.com";
   primaryUserHome = "/Users/${primaryUser}";
 
+  # MCP server configuration (shared between gg and _claude)
+  mcpConfig = {
+    mcpServers = {
+      pencil = {
+        type = "stdio";
+        command = "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64";
+        args = [
+          "--app"
+          "desktop"
+        ];
+        env = { };
+      };
+    };
+  };
+
+  # Shared Claude Code settings (source of truth for both gg and _claude)
+  baseClaudeSettings = builtins.fromJSON (builtins.readFile ./configs/claude.settings.json);
+
+  # _claude user gets the shared settings + LSP tool + extra plugins
+  claudeSettings = baseClaudeSettings // {
+    env = baseClaudeSettings.env // {
+      ENABLE_LSP_TOOL = "1";
+    };
+    enabledPlugins = baseClaudeSettings.enabledPlugins // {
+      "infracost@infracost" = true;
+      "rust-analyzer-lsp@claude-plugins-official" = true;
+      "typescript-lsp@claude-plugins-official" = true;
+      "pyright-lsp@claude-plugins-official" = true;
+      "gopls-lsp@claude-plugins-official" = true;
+      "ruby-lsp@claude-plugins-official" = true;
+      "spec-language-server@synapse" = true;
+      "bash-language-server@synapse" = true;
+      "svelte-lsp@synapse" = true;
+      "terraform-ls@synapse" = true;
+      "astro-lsp@synapse" = true;
+    };
+    skipDangerousModePermissionPrompt = true;
+  };
+
   # Shared toolchain PATH: prioritize nix system packages, then homebrew
   toolchainPath = lib.concatStringsSep ":" [
     "/run/current-system/sw/bin" # System packages (nodejs, cargo, etc.)
     "${primaryUserHome}/go/bin" # Go binaries
+    "${primaryUserHome}/Development/personal/synapse/target/debug" # Synapse debug binaries
     "/opt/homebrew/bin"
     "/opt/homebrew/sbin"
     "/etc/profiles/per-user/${primaryUser}/bin"
@@ -448,13 +488,10 @@ in
     ];
 
     brews = [
-      "devcontainer"
-      "opencode"
     ];
 
     casks = [
-      "container-use"
-      "claude-code"
+      "claude-code@latest"
       "codex"
       "copilot-cli"
     ];
@@ -467,17 +504,6 @@ in
     {
       home.file.".claude/CLAUDE.md".source = ./configs/agent.md;
       home.file.".claude/settings.json".source = ./configs/claude.settings.json;
-
-      home.activation.container-use = lib.hm.dag.entryAfter [ "writeBoundary" "homebrew" ] ''
-        PATH="${
-          lib.makeBinPath (
-            with pkgs;
-            [
-              claude-code
-            ]
-          )
-        }:$PATH"
-      '';
 
       programs.tmux = {
         enable = true;
@@ -511,35 +537,105 @@ in
     };
   };
 
-  home-manager.users.${claudeUser} = {
-    sops.age.sshKeyPaths = [ ];
-    home = {
-      stateVersion = "25.05";
-      homeDirectory = claudeHome;
-    };
-    programs.git = {
-      enable = true;
-      settings = {
-        init.defaultBranch = "main";
-        user.name = gitName;
-        user.email = gitEmail;
-        "credential \"https://github.com\"".helper = [
-          ""
-          "!/opt/homebrew/bin/gh auth git-credential"
-        ];
-        "credential \"https://gist.github.com\"".helper = [
-          ""
-          "!/opt/homebrew/bin/gh auth git-credential"
-        ];
+  home-manager.users.${claudeUser} =
+    { lib, pkgs, ... }:
+    {
+      sops.age.sshKeyPaths = [ ];
+      home = {
+        stateVersion = "25.05";
+        homeDirectory = claudeHome;
+
+        # Write settings.json as a regular file (not a symlink) so that
+        # `claude plugin install` can update it. Nix re-seeds the content
+        # on each rebuild, and the plugin installer can layer on top.
+        activation.claudeSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+                  mkdir -p ${claudeHome}/.claude
+                  rm -f ${claudeHome}/.claude/settings.json
+                  cat > ${claudeHome}/.claude/settings.json <<'SETTINGS_EOF'
+          ${builtins.toJSON claudeSettings}
+          SETTINGS_EOF
+                  chown ${claudeUser}:aicoders ${claudeHome}/.claude/settings.json
+                  chmod 600 ${claudeHome}/.claude/settings.json
+
+                  # Merge mcpServers into ~/.claude.json (Claude Code manages this file;
+                  # we only upsert the mcpServers key so we don't clobber other state).
+                  CLAUDE_JSON="${claudeHome}/.claude.json"
+                  if [ ! -f "$CLAUDE_JSON" ]; then
+                    echo '{}' > "$CLAUDE_JSON"
+                    chown ${claudeUser}:aicoders "$CLAUDE_JSON"
+                    chmod 600 "$CLAUDE_JSON"
+                  fi
+                  ${pkgs.python3}/bin/python3 -c "
+          import json, sys
+          path = sys.argv[1]
+          with open(path) as f:
+              d = json.load(f)
+          d['mcpServers'] = json.loads(sys.argv[2])
+          with open(path, 'w') as f:
+              json.dump(d, f, indent=2)
+          " "$CLAUDE_JSON" '${builtins.toJSON mcpConfig.mcpServers}'
+        '';
+
+        activation.claudePlugins = lib.hm.dag.entryAfter [ "claudeSettings" ] ''
+          if [ -x /opt/homebrew/bin/claude ]; then
+            CLAUDE_ENV="HOME=${claudeHome} PATH=/run/current-system/sw/bin:/opt/homebrew/bin:$PATH"
+
+            # Marketplaces
+            env $CLAUDE_ENV /opt/homebrew/bin/claude plugin marketplace add infracost/agent-skills 2>/dev/null || true
+            env $CLAUDE_ENV /opt/homebrew/bin/claude plugin marketplace add /Users/${primaryUser}/Development/personal/synapse/.claude-marketplace 2>/dev/null || true
+
+            # Infracost plugin
+            env $CLAUDE_ENV /opt/homebrew/bin/claude plugin install infracost@infracost 2>/dev/null || true
+
+            # Official LSP plugins
+            for plugin in \
+              swift-lsp \
+              rust-analyzer-lsp \
+              typescript-lsp \
+              pyright-lsp \
+              gopls-lsp \
+              ruby-lsp \
+            ; do
+              env $CLAUDE_ENV /opt/homebrew/bin/claude plugin install "$plugin@claude-plugins-official" 2>/dev/null || true
+            done
+
+            # Synapse marketplace plugins
+            for plugin in \
+              spec-language-server \
+              bash-language-server \
+              svelte-lsp \
+              terraform-ls \
+              astro-lsp \
+            ; do
+              env $CLAUDE_ENV /opt/homebrew/bin/claude plugin install "$plugin@synapse" 2>/dev/null || true
+            done
+          fi
+        '';
+      };
+      programs.git = {
+        enable = true;
+        settings = {
+          init.defaultBranch = "main";
+          user.name = gitName;
+          user.email = gitEmail;
+          "credential \"https://github.com\"".helper = [
+            ""
+            "!/opt/homebrew/bin/gh auth git-credential"
+          ];
+          "credential \"https://gist.github.com\"".helper = [
+            ""
+            "!/opt/homebrew/bin/gh auth git-credential"
+          ];
+        };
+      };
+      programs.tmux = {
+        enable = true;
       };
     };
-    programs.tmux = {
-      enable = true;
-    };
-  };
   security.sudo.extraConfig = ''
     ${primaryUser} ALL=(${claudeUser}) NOPASSWD: ${lib.getExe claudeAsUser}
     ${primaryUser} ALL=(${codexUser}) NOPASSWD: ${lib.getExe codexAsUser}
+    ${claudeUser} ALL=(${claudeUser}) NOPASSWD: ${lib.getExe claudeAsUser}
     ${claudeUser} ALL=(${codexUser}) NOPASSWD: ALL
     ${codexUser} ALL=(${claudeUser}) NOPASSWD: ALL
   '';

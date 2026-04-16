@@ -10,11 +10,11 @@
       final: prev:
       let
         pkgsGo = import inputs.nixpkgs-go {
-          system = prev.system;
+          system = prev.stdenv.hostPlatform.system;
           config = prev.config;
         };
         pkgsZed = import inputs.nixpkgs-zed {
-          system = prev.system;
+          system = prev.stdenv.hostPlatform.system;
           config = prev.config;
         };
       in
@@ -175,7 +175,6 @@
           "terraform"
           "prisma"
           "nix"
-          "opencode"
           "docker-compose"
           "catppuccin"
           "catppuccin-icons"

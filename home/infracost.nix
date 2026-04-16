@@ -40,7 +40,7 @@
       "cursor"
       "antigravity"
 
-      "claude-code"
+      "claude-code@latest"
     ];
     brews = [
       "awscli"
