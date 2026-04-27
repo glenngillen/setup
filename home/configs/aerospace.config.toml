@@ -57,9 +57,7 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", 
 # unknown key error on the line below :/
 # on-mode-changed = []
 
-exec-on-workspace-change = ['/bin/bash', '-c',
-    'aerospace move-node-to-workspace --window-id $(aerospace list-windows --monitor all --app-bundle-id co.boomvision.boom.macos | grep -i remote | cut -f 1 -d" ") $(aerospace list-workspaces --monitor mouse --visible)'
-]
+exec-on-workspace-change = ['~/.config/aerospace/aerospace-workspace-change.sh']
 
 # Possible values: (qwerty|dvorak|colemak)
 # See https://nikitabobko.github.io/AeroSpace/guide#key-mapping
@@ -236,6 +234,12 @@ exec-on-workspace-change = ['/bin/bash', '-c',
     'move-node-to-workspace Z',
     'layout floating',
     'macos-native-minimize' ]
+
+[[on-window-detected]]
+    if.app-id = 'com.cockos.LICEcap'
+    check-further-callbacks = false
+    run = [
+    'layout floating' ]
 
 [[on-window-detected]]
     if.app-id = 'us.zoom.xos'

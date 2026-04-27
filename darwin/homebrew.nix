@@ -9,7 +9,6 @@
       cleanup = "zap";
     };
 
-    caskArgs.no_quarantine = true;
     global.brewfile = true;
 
     # homebrew is best for GUI apps
@@ -66,5 +65,9 @@
   };
   home-manager.users.${primaryUser} = {
     home.file.".config/aerospace/aerospace.toml".source = ../home/configs/aerospace.config.toml;
+    home.file.".config/aerospace/aerospace-workspace-change.sh" = {
+      source = ../home/configs/aerospace-workspace-change.sh;
+      executable = true;
+    };
   };
 }

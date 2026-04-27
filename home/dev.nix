@@ -26,6 +26,7 @@
   ];
   environment.systemPackages = with pkgs; [
     nixd
+    awscli2
   ];
 
   environment.shellInit = ''
@@ -46,14 +47,12 @@
       cleanup = "zap";
     };
 
-    caskArgs.no_quarantine = true;
     global.brewfile = true;
 
     # homebrew is best for GUI apps
     # nixpkgs is best for CLI tools
     brews = [
       "aws-shell"
-      "awscli"
       "direnv"
       "bandwhich"
       "bat" # cat replacement
@@ -82,7 +81,6 @@
 
     casks = [
       "ghostty"
-      "git-credential-manager"
 
       "screenflow"
 
@@ -108,8 +106,8 @@
         find = "fd";
         du = "dust";
         ps = "procs";
-        top = "btm";
-        htop = "btm";
+        top = "btop";
+        htop = "btop";
         ping = "gping";
 
         cd = "z";

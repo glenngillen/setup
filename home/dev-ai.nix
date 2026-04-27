@@ -69,12 +69,14 @@ let
     CWD="/tmp"
     GH_TOKEN_VALUE=""
     CARGO_TARGET_DIR_VALUE=""
+    HTTPS_PROXY_VALUE=""
 
     while [ "$#" -gt 0 ]; do
       case "$1" in
         --cwd) CWD="$2"; shift 2 ;;
         --gh-token) GH_TOKEN_VALUE="$2"; shift 2 ;;
         --cargo-target-dir) CARGO_TARGET_DIR_VALUE="$2"; shift 2 ;;
+        --https-proxy) HTTPS_PROXY_VALUE="$2"; shift 2 ;;
         --) shift; break ;;
         *) break ;;
       esac
@@ -90,6 +92,9 @@ let
     export LC_ALL="''${LC_ALL:-}"
     export GH_TOKEN="$GH_TOKEN_VALUE"
     export CARGO_TARGET_DIR="$CARGO_TARGET_DIR_VALUE"
+    if [ -n "$HTTPS_PROXY_VALUE" ]; then
+      export HTTPS_PROXY="$HTTPS_PROXY_VALUE"
+    fi
     export GIT_CONFIG_COUNT=1
     export GIT_CONFIG_KEY_0=safe.directory
     export GIT_CONFIG_VALUE_0="$CWD"
@@ -114,11 +119,17 @@ let
     if [ -z "$GH_TOKEN_VALUE" ] && command -v gh >/dev/null 2>&1; then
       GH_TOKEN_VALUE="$(gh auth token 2>/dev/null || true)"
     fi
+    HTTPS_PROXY_ARGS=()
+    if [ -n "''${HTTPS_PROXY:-}" ]; then
+      HTTPS_PROXY_ARGS+=(--https-proxy "$HTTPS_PROXY")
+    fi
+
     exec sudo -u ${codexUser} -H \
       ${lib.getExe codexAsUser} \
       --cwd "$CWD_REAL" \
       --gh-token "$GH_TOKEN_VALUE" \
       --cargo-target-dir "''${CARGO_TARGET_DIR:-}" \
+      "''${HTTPS_PROXY_ARGS[@]}" \
       -- "$@"
   '';
 
@@ -129,6 +140,7 @@ let
     GH_TOKEN_VALUE=""
     TOKEN_PROFILE="default"
     CARGO_TARGET_DIR_VALUE=""
+    HTTPS_PROXY_VALUE=""
 
     while [ "$#" -gt 0 ]; do
       case "$1" in
@@ -136,6 +148,7 @@ let
         --gh-token) GH_TOKEN_VALUE="$2"; shift 2 ;;
         --token-profile) TOKEN_PROFILE="$2"; shift 2 ;;
         --cargo-target-dir) CARGO_TARGET_DIR_VALUE="$2"; shift 2 ;;
+        --https-proxy) HTTPS_PROXY_VALUE="$2"; shift 2 ;;
         --) shift; break ;;
         *) break ;;
       esac
@@ -151,6 +164,9 @@ let
     export LC_ALL="''${LC_ALL:-}"
     export GH_TOKEN="$GH_TOKEN_VALUE"
     export CARGO_TARGET_DIR="$CARGO_TARGET_DIR_VALUE"
+    if [ -n "$HTTPS_PROXY_VALUE" ]; then
+      export HTTPS_PROXY="$HTTPS_PROXY_VALUE"
+    fi
     export GIT_CONFIG_COUNT=1
     export GIT_CONFIG_KEY_0=safe.directory
     export GIT_CONFIG_VALUE_0="$CWD"
@@ -207,6 +223,7 @@ let
       exit 1
     fi
 
+    export NODE_OPTIONS="--import /private/var/lib/claude/.claude/synapse-interceptor.mjs"
     exec /opt/homebrew/bin/claude "$@"
   '';
 
@@ -230,12 +247,18 @@ let
       esac
     done
 
+    HTTPS_PROXY_ARGS=()
+    if [ -n "''${HTTPS_PROXY:-}" ]; then
+      HTTPS_PROXY_ARGS+=(--https-proxy "$HTTPS_PROXY")
+    fi
+
     exec sudo -u ${claudeUser} -H \
       ${lib.getExe claudeAsUser} \
       --cwd "$CWD_REAL" \
       --gh-token "$GH_TOKEN_VALUE" \
       --token-profile "$TOKEN_PROFILE" \
       --cargo-target-dir "''${CARGO_TARGET_DIR:-}" \
+      "''${HTTPS_PROXY_ARGS[@]}" \
       -- "''${PASSTHROUGH_ARGS[@]}"
   '';
 
@@ -480,7 +503,6 @@ in
       cleanup = "zap";
     };
 
-    caskArgs.no_quarantine = true;
     global.brewfile = true;
 
     taps = [

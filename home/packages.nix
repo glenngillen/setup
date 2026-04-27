@@ -8,6 +8,7 @@
       vim
       tmux
       htop
+      btop
       tree
 
       colima

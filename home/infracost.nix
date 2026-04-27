@@ -14,7 +14,6 @@
       cleanup = "zap";
     };
 
-    caskArgs.no_quarantine = true;
     global.brewfile = true;
 
     taps = [
@@ -35,7 +34,6 @@
       "loom"
 
       "visual-studio-code"
-      "intellij-idea"
       "windsurf"
       "cursor"
       "antigravity"
@@ -43,7 +41,6 @@
       "claude-code@latest"
     ];
     brews = [
-      "awscli"
       "kubectl"
       "docker"
 
