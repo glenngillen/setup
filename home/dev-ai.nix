@@ -19,15 +19,6 @@ let
   # MCP server configuration (shared between gg and _claude)
   mcpConfig = {
     mcpServers = {
-      pencil = {
-        type = "stdio";
-        command = "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64";
-        args = [
-          "--app"
-          "desktop"
-        ];
-        env = { };
-      };
     };
   };
 
@@ -472,7 +463,8 @@ in
     shell = null;
   };
 
-  system.activationScripts.codexHome.text = ''
+  system.activationScripts.postActivation.text = ''
+    echo "setting up codex home..." >&2
     mkdir -p ${codexHome}/.config ${codexHome}/.cache ${codexHome}/.local/share ${codexHome}/.local/bin
     chmod 700 ${codexHome}
 
@@ -482,32 +474,101 @@ in
     CODEX_KC="${codexHome}/Library/Keychains/login.keychain-db"
     if [ ! -f "$CODEX_KC" ]; then
       mkdir -p "$(dirname "$CODEX_KC")"
-      sudo -u ${codexUser} /usr/bin/security create-keychain -p "" "$CODEX_KC"
-      sudo -u ${codexUser} /usr/bin/security default-keychain -s "$CODEX_KC"
-      /usr/bin/security lock-keychain "$CODEX_KC"
+      sudo -u ${codexUser} -H env HOME=${codexHome} /usr/bin/security create-keychain -p "" "$CODEX_KC"
+      sudo -u ${codexUser} -H env HOME=${codexHome} /usr/bin/security default-keychain -s "$CODEX_KC"
+      sudo -u ${codexUser} -H env HOME=${codexHome} /usr/bin/security lock-keychain "$CODEX_KC"
     fi
-  '';
-  system.activationScripts.claudeHome.text = ''
+
+    echo "setting up claude home..." >&2
     mkdir -p ${claudeHome}/.config ${claudeHome}/.cache ${claudeHome}/.local/share ${claudeHome}/.local/bin ${claudeHome}/.claude-infracost
     chmod 700 ${claudeHome}
 
-    # Create a login keychain for the service user so macOS doesn't show
-    # "Keychain Not Found" popups. Left locked so nothing writes to it;
-    # the tool falls back to file-based credential storage.
     CLAUDE_KC="${claudeHome}/Library/Keychains/login.keychain-db"
     if [ ! -f "$CLAUDE_KC" ]; then
       mkdir -p "$(dirname "$CLAUDE_KC")"
-      sudo -u ${claudeUser} /usr/bin/security create-keychain -p "" "$CLAUDE_KC"
-      sudo -u ${claudeUser} /usr/bin/security default-keychain -s "$CLAUDE_KC"
-      /usr/bin/security lock-keychain "$CLAUDE_KC"
+      sudo -u ${claudeUser} -H env HOME=${claudeHome} /usr/bin/security create-keychain -p "" "$CLAUDE_KC"
+      sudo -u ${claudeUser} -H env HOME=${claudeHome} /usr/bin/security default-keychain -s "$CLAUDE_KC"
+      sudo -u ${claudeUser} -H env HOME=${claudeHome} /usr/bin/security lock-keychain "$CLAUDE_KC"
     fi
-  '';
 
-  system.activationScripts.aiPermissions.text = ''
+    echo "setting up synapse agent home..." >&2
+    mkdir -p ${synapseAgentHome}/.claude ${synapseAgentHome}/.config ${synapseAgentHome}/.cache ${synapseAgentHome}/.local/share ${synapseAgentHome}/.local/bin ${synapseAgentHome}/.claude-infracost
+    chown -R ${synapseAgentUser}:aicoders ${synapseAgentHome}
+
+    # Write claude settings.json
+    rm -f ${synapseAgentHome}/.claude/settings.json
+    cat > ${synapseAgentHome}/.claude/settings.json <<'SETTINGS_EOF'
+    ${builtins.toJSON claudeSettings}
+    SETTINGS_EOF
+    chown ${synapseAgentUser}:aicoders ${synapseAgentHome}/.claude/settings.json
+    chmod 600 ${synapseAgentHome}/.claude/settings.json
+
+    # Merge mcpServers into ~/.claude.json
+    CLAUDE_JSON="${synapseAgentHome}/.claude.json"
+    if [ ! -f "$CLAUDE_JSON" ]; then
+      echo '{}' > "$CLAUDE_JSON"
+      chown ${synapseAgentUser}:aicoders "$CLAUDE_JSON"
+      chmod 600 "$CLAUDE_JSON"
+    fi
+    ${pkgs.python3}/bin/python3 -c "
+    import json, sys
+    path = sys.argv[1]
+    with open(path) as f:
+        d = json.load(f)
+    d['mcpServers'] = json.loads(sys.argv[2])
+    with open(path, 'w') as f:
+        json.dump(d, f, indent=2)
+    " "$CLAUDE_JSON" '${builtins.toJSON mcpConfig.mcpServers}'
+
+    # Install rustup components as _synapseagent
+    if command -v rustup >/dev/null 2>&1; then
+      sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} PATH="/run/current-system/sw/bin:${synapseAgentHome}/.cargo/bin:/opt/homebrew/bin:$PATH" rustup component add rust-analyzer 2>/dev/null || true
+    fi
+
+    # Install and enable plugins as _synapseagent
+    echo "installing claude plugins for ${synapseAgentUser}..." >&2
+    if [ -x /opt/homebrew/bin/claude ]; then
+      SA_CMD="sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} PATH=/run/current-system/sw/bin:${synapseAgentHome}/.cargo/bin:/opt/homebrew/bin:''$PATH"
+
+      # Marketplaces
+      $SA_CMD /opt/homebrew/bin/claude plugin marketplace add anthropics/claude-plugins-official 2>/dev/null || true
+      $SA_CMD /opt/homebrew/bin/claude plugin marketplace add infracost/agent-skills 2>/dev/null || true
+      $SA_CMD /opt/homebrew/bin/claude plugin marketplace add /Users/${primaryUser}/Development/personal/synapse/.claude-marketplace 2>/dev/null || true
+
+      # Infracost plugin
+      $SA_CMD /opt/homebrew/bin/claude plugin install infracost@infracost 2>/dev/null || true
+
+      # Official LSP plugins
+      for plugin in \
+        rust-analyzer-lsp \
+        typescript-lsp \
+        swift-lsp \
+        pyright-lsp \
+        gopls-lsp \
+        ruby-lsp \
+      ; do
+        $SA_CMD /opt/homebrew/bin/claude plugin install "$plugin@claude-plugins-official" 2>/dev/null || true
+        $SA_CMD /opt/homebrew/bin/claude plugin enable "$plugin@claude-plugins-official" 2>/dev/null || true
+      done
+
+      # Synapse marketplace plugins
+      for plugin in \
+        spec-language-server \
+        bash-language-server \
+        svelte-lsp \
+        terraform-ls \
+        astro-lsp \
+      ; do
+        $SA_CMD /opt/homebrew/bin/claude plugin install "$plugin@synapse" 2>/dev/null || true
+        $SA_CMD /opt/homebrew/bin/claude plugin enable "$plugin@synapse" 2>/dev/null || true
+      done
+    fi
+
+    echo "setting up ai permissions..." >&2
     # Grant aicoders group basic access to traverse user home and system directories
-    sudo chmod +a "group:aicoders allow read,execute,search" "$TMPDIR"
-    sudo chmod +a "group:aicoders allow read,execute,search,file_inherit,directory_inherit" "$\{TMPDIR\}TemporaryItems"
-    sudo chmod +a "group:aicoders allow search" /var/folders/
+    chmod +a "group:aicoders allow read,execute,search" "$TMPDIR" 2>/dev/null || true
+    chmod +a "group:aicoders allow read,execute,search,file_inherit,directory_inherit" "$\{TMPDIR\}TemporaryItems" 2>/dev/null || true
+    chmod +a "group:aicoders allow search" /var/folders/ 2>/dev/null || true
 
     # Grant access to go binaries (if needed for project-installed tools)
     for d in /Users/${primaryUser}/go \
@@ -534,6 +595,7 @@ in
     ];
 
     brews = [
+      "swift"
     ];
 
     casks = [
