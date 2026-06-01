@@ -8,6 +8,8 @@
 let
   codexUser = "_codex";
   codexHome = "/private/var/lib/codex";
+  synapseAgentUser = "_synapseagent";
+  synapseAgentHome = "/var/synapse/agent-home";
   claudeUser = "_claude";
   claudeHome = "/private/var/lib/claude";
   gitName = "Glenn Gillen";
@@ -82,10 +84,10 @@ let
       esac
     done
 
-    export HOME=${codexHome}
-    export XDG_CONFIG_HOME=${codexHome}/.config
-    export XDG_CACHE_HOME=${codexHome}/.cache
-    export XDG_DATA_HOME=${codexHome}/.local/share
+    export HOME=${synapseAgentHome}
+    export XDG_CONFIG_HOME=${synapseAgentHome}/.config
+    export XDG_CACHE_HOME=${synapseAgentHome}/.cache
+    export XDG_DATA_HOME=${synapseAgentHome}/.local/share
     export TERM="''${TERM:-xterm-ghostty}"
     export COLORTERM="''${COLORTERM:-xterm-ghostty}"
     export LANG="''${LANG:-}"
@@ -98,7 +100,7 @@ let
     export GIT_CONFIG_COUNT=1
     export GIT_CONFIG_KEY_0=safe.directory
     export GIT_CONFIG_VALUE_0="$CWD"
-    export PATH="${codexHome}/.cargo/bin:${codexHome}/.local/bin:${toolchainPath}:$PATH"
+    export PATH="${synapseAgentHome}/.cargo/bin:${synapseAgentHome}/.local/bin:${toolchainPath}:$PATH"
     umask 0002
 
     if ! cd "$CWD" 2>/dev/null; then
@@ -124,13 +126,20 @@ let
       HTTPS_PROXY_ARGS+=(--https-proxy "$HTTPS_PROXY")
     fi
 
-    exec sudo -u ${codexUser} -H \
-      ${lib.getExe codexAsUser} \
-      --cwd "$CWD_REAL" \
-      --gh-token "$GH_TOKEN_VALUE" \
-      --cargo-target-dir "''${CARGO_TARGET_DIR:-}" \
-      "''${HTTPS_PROXY_ARGS[@]}" \
+    CODEX_ARGS=(
+      ${lib.getExe codexAsUser}
+      --cwd "$CWD_REAL"
+      --gh-token "$GH_TOKEN_VALUE"
+      --cargo-target-dir "''${CARGO_TARGET_DIR:-}"
+      "''${HTTPS_PROXY_ARGS[@]}"
       -- "$@"
+    )
+
+    if [ "$(id -un)" = "${synapseAgentUser}" ]; then
+      exec "''${CODEX_ARGS[@]}"
+    else
+      exec sudo -u ${synapseAgentUser} -H "''${CODEX_ARGS[@]}"
+    fi
   '';
 
   claudeAsUser = pkgs.writeShellScriptBin "claude-as-claudeuser" ''
@@ -141,6 +150,7 @@ let
     TOKEN_PROFILE="default"
     CARGO_TARGET_DIR_VALUE=""
     HTTPS_PROXY_VALUE=""
+    IS_DEMO_VALUE=""
 
     while [ "$#" -gt 0 ]; do
       case "$1" in
@@ -149,15 +159,16 @@ let
         --token-profile) TOKEN_PROFILE="$2"; shift 2 ;;
         --cargo-target-dir) CARGO_TARGET_DIR_VALUE="$2"; shift 2 ;;
         --https-proxy) HTTPS_PROXY_VALUE="$2"; shift 2 ;;
+        --is-demo) IS_DEMO_VALUE="$2"; shift 2 ;;
         --) shift; break ;;
         *) break ;;
       esac
     done
 
-    export HOME=${claudeHome}
-    export XDG_CONFIG_HOME=${claudeHome}/.config
-    export XDG_CACHE_HOME=${claudeHome}/.cache
-    export XDG_DATA_HOME=${claudeHome}/.local/share
+    export HOME=${synapseAgentHome}
+    export XDG_CONFIG_HOME=${synapseAgentHome}/.config
+    export XDG_CACHE_HOME=${synapseAgentHome}/.cache
+    export XDG_DATA_HOME=${synapseAgentHome}/.local/share
     export TERM="''${TERM:-xterm-256color}"
     export COLORTERM="''${COLORTERM:-}"
     export LANG="''${LANG:-}"
@@ -170,8 +181,9 @@ let
     export GIT_CONFIG_COUNT=1
     export GIT_CONFIG_KEY_0=safe.directory
     export GIT_CONFIG_VALUE_0="$CWD"
+    export IS_DEMO="$IS_DEMO_VALUE"
     export AWS_EC2_METADATA_DISABLED=true
-    export PATH="${claudeHome}/.cargo/bin:${claudeHome}/.local/bin:${toolchainPath}:$PATH"
+    export PATH="${synapseAgentHome}/.cargo/bin:${synapseAgentHome}/.local/bin:${toolchainPath}:$PATH"
 
     # Select OAuth token and config directory based on profile
     case "$TOKEN_PROFILE" in
@@ -180,7 +192,7 @@ let
         ;;
       infracost)
         OAUTH_SECRET="${config.sops.secrets."CLAUDE_CODE_OAUTH_TOKEN_INFRACOST".path}"
-        export CLAUDE_CONFIG_DIR="${claudeHome}/.claude-infracost"
+        export CLAUDE_CONFIG_DIR="${synapseAgentHome}/.claude-infracost"
         ;;
       *)
         echo "claude: unknown token profile: $TOKEN_PROFILE" >&2
@@ -223,7 +235,7 @@ let
       exit 1
     fi
 
-    export NODE_OPTIONS="--import /private/var/lib/claude/.claude/synapse-interceptor.mjs"
+    export NODE_OPTIONS="--import ${synapseAgentHome}/.claude/synapse-interceptor.mjs"
     exec /opt/homebrew/bin/claude "$@"
   '';
 
@@ -252,14 +264,24 @@ let
       HTTPS_PROXY_ARGS+=(--https-proxy "$HTTPS_PROXY")
     fi
 
-    exec sudo -u ${claudeUser} -H \
-      ${lib.getExe claudeAsUser} \
-      --cwd "$CWD_REAL" \
-      --gh-token "$GH_TOKEN_VALUE" \
-      --token-profile "$TOKEN_PROFILE" \
-      --cargo-target-dir "''${CARGO_TARGET_DIR:-}" \
-      "''${HTTPS_PROXY_ARGS[@]}" \
+    IS_DEMO_ARGS=(--is-demo "''${IS_DEMO:-1}")
+
+    CLAUDE_ARGS=(
+      ${lib.getExe claudeAsUser}
+      --cwd "$CWD_REAL"
+      --gh-token "$GH_TOKEN_VALUE"
+      --token-profile "$TOKEN_PROFILE"
+      --cargo-target-dir "''${CARGO_TARGET_DIR:-}"
+      "''${HTTPS_PROXY_ARGS[@]}"
+      "''${IS_DEMO_ARGS[@]}"
       -- "''${PASSTHROUGH_ARGS[@]}"
+    )
+
+    if [ "$(id -un)" = "${synapseAgentUser}" ]; then
+      exec "''${CLAUDE_ARGS[@]}"
+    else
+      exec sudo -u ${synapseAgentUser} -H "''${CLAUDE_ARGS[@]}"
+    fi
   '';
 
   aicoderPerms = pkgs.writeShellScriptBin "aicoder-perms" ''
@@ -389,6 +411,7 @@ in
     codexScript
     claudeScript
     aicoderPerms
+    pkgs.llm-agents.rtk
 
     # Development languages and tools (available to all users including _claude/_codex)
     nodejs_22 # or nodejs-slim if you don't need npm
@@ -424,6 +447,7 @@ in
     members = [
       "_codex"
       "_claude"
+      "_synapseagent"
       primaryUser
     ];
   };
@@ -527,6 +551,14 @@ in
       home.file.".claude/CLAUDE.md".source = ./configs/agent.md;
       home.file.".claude/settings.json".source = ./configs/claude.settings.json;
 
+      programs.rtk-hooks = {
+        enable = true;
+        integrations = {
+          claude.enable = true;
+          codex.enable = true;
+        };
+      };
+
       programs.tmux = {
         enable = true;
       };
@@ -537,6 +569,10 @@ in
     home = {
       stateVersion = "25.05";
       homeDirectory = codexHome;
+    };
+    programs.rtk-hooks = {
+      enable = true;
+      integrations.codex.enable = true;
     };
     programs.git = {
       enable = true;
@@ -563,6 +599,10 @@ in
     { lib, pkgs, ... }:
     {
       sops.age.sshKeyPaths = [ ];
+      programs.rtk-hooks = {
+        enable = true;
+        integrations.claude.enable = true;
+      };
       home = {
         stateVersion = "25.05";
         homeDirectory = claudeHome;
@@ -657,8 +697,12 @@ in
   security.sudo.extraConfig = ''
     ${primaryUser} ALL=(${claudeUser}) NOPASSWD: ${lib.getExe claudeAsUser}
     ${primaryUser} ALL=(${codexUser}) NOPASSWD: ${lib.getExe codexAsUser}
+    ${primaryUser} ALL=(_synapseagent) NOPASSWD: ALL
+
     ${claudeUser} ALL=(${claudeUser}) NOPASSWD: ${lib.getExe claudeAsUser}
     ${claudeUser} ALL=(${codexUser}) NOPASSWD: ALL
     ${codexUser} ALL=(${claudeUser}) NOPASSWD: ALL
+    ${claudeUser} ALL=(_synapseagent) NOPASSWD: ALL
+    ${codexUser} ALL=(_synapseagent) NOPASSWD: ALL
   '';
 }

@@ -16,6 +16,9 @@
       init = {
         defaultBranch = "main";
       };
+      core = {
+        editor = "zeditor --wait";
+      };
     };
   };
 

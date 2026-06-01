@@ -18,9 +18,18 @@
 
     # declarative homebrew management
     nix-homebrew.url = "github:zhaofengli/nix-homebrew";
+    nix-homebrew.inputs.brew-src.follows = "brew-src";
+    brew-src = {
+      url = "github:Homebrew/brew/5.1.10";
+      flake = false;
+    };
 
     # sops (secrets management)
     sops-nix.url = "github:Mic92/sops-nix";
+
+    # rtk (token-efficient proxy for AI coding agents)
+    nix-rtk.url = "github:deepwatrcreatur/nix-rtk";
+    nix-rtk.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =

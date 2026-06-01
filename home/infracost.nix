@@ -18,6 +18,7 @@
 
     taps = [
       "hashicorp/tap"
+      "azure/bicep"
     ];
 
     casks = [
@@ -39,6 +40,7 @@
       "antigravity"
 
       "claude-code@latest"
+
     ];
     brews = [
       "kubectl"
@@ -46,8 +48,11 @@
 
       "colima"
 
+      "buf"
+
       "tilt"
       "hashicorp/tap/terraform"
+      "azure/bicep/bicep"
     ];
   };
 
