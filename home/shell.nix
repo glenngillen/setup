@@ -7,12 +7,14 @@ _: {
 
     initContent = ''
       eval "$(direnv hook zsh)"
+      source ~/.config/nix/home/configs/setup.sh
     '';
 
     shellAliases = {
       la = "ls -la";
       ".." = "cd ..";
-      "nix-switch" = "sudo darwin-rebuild switch --flake ~/.config/nix";
+      # legacy alias - use 'setup sync' instead
+      "nix-switch" = "setup sync";
     };
   };
 

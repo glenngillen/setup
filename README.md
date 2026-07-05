@@ -23,12 +23,22 @@ After the first run completes, restart your terminal to pick up the new shell co
 
 #### Subsequent updates
 
-Use `darwin-rebuild` directly or the `nix-switch` alias:
+Use the `setup` command:
 
 ```bash
-darwin-rebuild switch --flake .#<hostname>
-# or after initial setup:
-nix-switch
+setup sync              # Apply current configuration
+setup update            # Update all flake inputs + apply
+setup update nixpkgs    # Update specific input + apply
+setup upgrade nix       # Upgrade Determinate Nix
+setup upgrade brew      # Upgrade Homebrew packages
+setup status            # Show system status
+setup edit              # Open config in $EDITOR
+```
+
+Or use `darwin-rebuild` directly:
+
+```bash
+darwin-rebuild switch --flake ".#<hostname>"
 ```
 
 ## FlakeHub Cache Authentication
