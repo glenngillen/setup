@@ -8,6 +8,7 @@
 #   upgrade   Upgrade components (nix, brew)
 #   status    Show current system status
 #   edit      Open nix config in editor
+#   clean     Garbage collect and reclaim disk space
 
 NIXCONFIG="${HOME}/.config/nix"
 
@@ -30,6 +31,9 @@ setup() {
             ;;
         edit)
             _setup_edit "$@"
+            ;;
+        clean)
+            _setup_clean "$@"
             ;;
         help|--help|-h)
             _setup_help
@@ -56,6 +60,10 @@ Commands:
                       brew  - upgrade Homebrew packages
   status            Show system status
   edit              Open config in \$EDITOR
+  clean [level]     Garbage collect and reclaim disk space:
+                      (default) - remove unused packages
+                      generations - also delete old generations
+                      all - full cleanup + optimise store
 
 Examples:
   setup sync                 # Apply current config
@@ -68,7 +76,7 @@ EOF
 
 _setup_sync() {
     echo "Applying configuration..."
-    sudo darwin-rebuild switch --flake "${NIXCONFIG}"
+    sudo -H darwin-rebuild switch --flake "${NIXCONFIG}"
 }
 
 _setup_update() {
@@ -134,4 +142,58 @@ _setup_status() {
 
 _setup_edit() {
     ${EDITOR:-code} "${NIXCONFIG}"
+}
+
+_setup_clean() {
+    local level="${1:-default}"
+
+    case "$level" in
+        default)
+            echo "=== Garbage collecting unused packages ==="
+            nix store gc
+            echo ""
+            echo "=== Disk usage ==="
+            _setup_clean_usage
+            ;;
+        generations)
+            echo "=== Deleting old generations ==="
+            sudo nix-collect-garbage -d
+            echo ""
+            echo "=== Disk usage ==="
+            _setup_clean_usage
+            ;;
+        all)
+            echo "=== Deleting old generations ==="
+            sudo nix-collect-garbage -d
+            echo ""
+            echo "=== Optimising store (deduplication) ==="
+            nix store optimise
+            echo ""
+            echo "=== Disk usage ==="
+            _setup_clean_usage
+            ;;
+        help|--help|-h)
+            echo "Usage: setup clean [level]"
+            echo ""
+            echo "Levels:"
+            echo "  (default)    - Remove unused packages from store"
+            echo "  generations  - Delete old generations + garbage collect"
+            echo "  all          - Full cleanup: delete generations, gc, and optimise store"
+            echo ""
+            echo "Examples:"
+            echo "  setup clean              # Quick cleanup"
+            echo "  setup clean generations  # Remove old system generations"
+            echo "  setup clean all          # Maximum disk reclamation"
+            ;;
+        *)
+            echo "Unknown clean level: $level"
+            echo "Run 'setup clean help' for options"
+            return 1
+            ;;
+    esac
+}
+
+_setup_clean_usage() {
+    local store_size=$(du -sh /nix/store 2>/dev/null | cut -f1)
+    echo "Nix store: ${store_size:-unknown}"
 }

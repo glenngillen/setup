@@ -259,22 +259,6 @@
         "type": "github"
       }
     },
-    "nixpkgs-zed": {
-      "locked": {
-        "lastModified": 1769740369,
-        "narHash": "sha256-xKPyJoMoXfXpDM5DFDZDsi9PHArf2k5BJjvReYXoFpM=",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "6308c3b21396534d8aaeac46179c14c439a89b8a",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "6308c3b21396534d8aaeac46179c14c439a89b8a",
-        "type": "github"
-      }
-    },
     "nixpkgs_2": {
       "locked": {
         "lastModified": 1775888245,
@@ -300,7 +284,6 @@
         "nix-rtk": "nix-rtk",
         "nixpkgs": "nixpkgs",
         "nixpkgs-go": "nixpkgs-go",
-        "nixpkgs-zed": "nixpkgs-zed",
         "sops-nix": "sops-nix"
       }
     },

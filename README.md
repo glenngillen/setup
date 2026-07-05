@@ -16,7 +16,7 @@ On a fresh machine, `darwin-rebuild` doesn't exist yet. Bootstrap nix-darwin wit
 
 ```bash
 # Replace <hostname> with your host (e.g., calculon, scruffy)
-sudo nix run nix-darwin -- switch --flake ".#<hostname>"
+sudo -H nix run nix-darwin -- switch --flake ".#<hostname>"
 ```
 
 After the first run completes, restart your terminal to pick up the new shell configuration.
@@ -33,6 +33,9 @@ setup upgrade nix       # Upgrade Determinate Nix
 setup upgrade brew      # Upgrade Homebrew packages
 setup status            # Show system status
 setup edit              # Open config in $EDITOR
+setup clean             # Garbage collect unused packages
+setup clean generations # Delete old generations + gc
+setup clean all         # Full cleanup + optimise store
 ```
 
 Or use `darwin-rebuild` directly:
