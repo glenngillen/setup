@@ -43,19 +43,27 @@
       ...
     }@inputs:
     let
-      primaryUser = "gg";
-    in
-    {
-      # build darwin flake using:
-      # $ darwin-rebuild build --flake .#<name>
-      darwinConfigurations."calculon" = darwin.lib.darwinSystem {
+      mkDarwinSystem = { hostname, primaryUser }: darwin.lib.darwinSystem {
         system = "aarch64-darwin";
         modules = [
           ./darwin
-          ./hosts/calculon/configuration.nix
+          ./hosts/${hostname}/configuration.nix
           sops-nix.darwinModules.sops
         ];
         specialArgs = { inherit inputs self primaryUser; };
+      };
+    in
+    {
+      # build darwin flake using:
+      # $ nix run nix-darwin -- switch --flake .#<name>  (first time)
+      # $ darwin-rebuild switch --flake .#<name>        (subsequent)
+      darwinConfigurations."calculon" = mkDarwinSystem {
+        hostname = "calculon";
+        primaryUser = "gg";
+      };
+      darwinConfigurations."scruffy" = mkDarwinSystem {
+        hostname = "scruffy";
+        primaryUser = "glenn";
       };
       packages.aarch64-darwin.default = { };
     };

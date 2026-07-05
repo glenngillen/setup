@@ -10,18 +10,24 @@ Uses nix, flakes, nix-darwin, Home Manager, and Mise to setup my macOS machine(s
 
 ### Apply the Configuration
 
-#### First-time
+#### First-time setup
+
+On a fresh machine, `darwin-rebuild` doesn't exist yet. Bootstrap nix-darwin with:
 
 ```bash
-# Build and switch to the configuration
-darwin-rebuild switch --flake .#my-macbook
+# Replace <hostname> with your host (e.g., calculon, scruffy)
+sudo nix run nix-darwin -- switch --flake ".#<hostname>"
 ```
+
+After the first run completes, restart your terminal to pick up the new shell configuration.
 
 #### Subsequent updates
 
-# Or use the alias after initial setup
+Use `darwin-rebuild` directly or the `nix-switch` alias:
 
 ```bash
+darwin-rebuild switch --flake .#<hostname>
+# or after initial setup:
 nix-switch
 ```
 
