@@ -151,7 +151,10 @@
     programs = {
       zsh = {
         enable = true;
-        initContent = "eval $(zoxide init zsh); source ~/.config/fzf-git.sh";
+        initContent = ''
+          export PATH="/opt/homebrew/opt/zig@0.15/bin:$PATH"
+          eval $(zoxide init zsh); source ~/.config/fzf-git.sh
+        '';
         shellAliases = {
           reload = ". ~/.zshenv && . ~/.zshrc";
         };
