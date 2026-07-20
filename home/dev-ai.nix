@@ -42,6 +42,13 @@ let
     skipDangerousModePermissionPrompt = true;
   };
 
+  # Infracost profile: same settings but routed through tokenomics gateway
+  claudeSettingsInfracost = claudeSettings // {
+    env = claudeSettings.env // {
+      ANTHROPIC_BASE_URL = "https://tokenomics-gateway.internal.dev.infracost.io";
+    };
+  };
+
   # Shared toolchain PATH: prioritize nix system packages, then homebrew
   toolchainPath = lib.concatStringsSep ":" [
     "/run/current-system/sw/bin" # System packages (nodejs, cargo, etc.)
@@ -57,6 +64,7 @@ let
 
     CWD="/tmp"
     GH_TOKEN_VALUE=""
+    TOKEN_PROFILE="default"
     CARGO_TARGET_DIR_VALUE=""
     HTTPS_PROXY_VALUE=""
 
@@ -64,6 +72,7 @@ let
       case "$1" in
         --cwd) CWD="$2"; shift 2 ;;
         --gh-token) GH_TOKEN_VALUE="$2"; shift 2 ;;
+        --token-profile) TOKEN_PROFILE="$2"; shift 2 ;;
         --cargo-target-dir) CARGO_TARGET_DIR_VALUE="$2"; shift 2 ;;
         --https-proxy) HTTPS_PROXY_VALUE="$2"; shift 2 ;;
         --) shift; break ;;
@@ -95,6 +104,21 @@ let
     export GIT_CONFIG_KEY_2=user.email
     export GIT_CONFIG_VALUE_2="${gitEmail}"
     export PATH="${synapseAgentHome}/.cargo/bin:${synapseAgentHome}/.local/bin:${toolchainPath}:$PATH"
+
+    # Select codex config directory based on profile
+    case "$TOKEN_PROFILE" in
+      default)
+        ;;
+      infracost)
+        export CODEX_HOME="${synapseAgentHome}/.codex-infracost"
+        ;;
+      *)
+        echo "codex: unknown token profile: $TOKEN_PROFILE" >&2
+        echo "       available profiles: default, infracost" >&2
+        exit 1
+        ;;
+    esac
+
     umask 0002
 
     if ! cd "$CWD" 2>/dev/null; then
@@ -115,6 +139,17 @@ let
     if [ -z "$GH_TOKEN_VALUE" ] && command -v gh >/dev/null 2>&1; then
       GH_TOKEN_VALUE="$(gh auth token 2>/dev/null || true)"
     fi
+
+    TOKEN_PROFILE="default"
+    PASSTHROUGH_ARGS=()
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --as=*) TOKEN_PROFILE="''${1#--as=}"; shift ;;
+        --as)   TOKEN_PROFILE="$2"; shift 2 ;;
+        *)      PASSTHROUGH_ARGS+=("$1"); shift ;;
+      esac
+    done
+
     HTTPS_PROXY_ARGS=()
     if [ -n "''${HTTPS_PROXY:-}" ]; then
       HTTPS_PROXY_ARGS+=(--https-proxy "$HTTPS_PROXY")
@@ -124,9 +159,10 @@ let
       ${lib.getExe codexAsUser}
       --cwd "$CWD_REAL"
       --gh-token "$GH_TOKEN_VALUE"
+      --token-profile "$TOKEN_PROFILE"
       --cargo-target-dir "''${CARGO_TARGET_DIR:-}"
       "''${HTTPS_PROXY_ARGS[@]}"
-      -- "$@"
+      -- "''${PASSTHROUGH_ARGS[@]}"
     )
 
     if [ "$(id -un)" = "${synapseAgentUser}" ]; then
@@ -463,7 +499,7 @@ in
 
   system.activationScripts.postActivation.text = ''
     echo "setting up synapse agent home..." >&2
-    mkdir -p ${synapseAgentHome}/.claude ${synapseAgentHome}/.config ${synapseAgentHome}/.cache ${synapseAgentHome}/.local/share ${synapseAgentHome}/.local/bin ${synapseAgentHome}/.claude-infracost
+    mkdir -p ${synapseAgentHome}/.claude ${synapseAgentHome}/.config ${synapseAgentHome}/.cache ${synapseAgentHome}/.local/share ${synapseAgentHome}/.local/bin ${synapseAgentHome}/.claude-infracost ${synapseAgentHome}/.codex-infracost
     chown -R ${synapseAgentUser}:aicoders ${synapseAgentHome}
 
     # Create a login keychain for the service user so macOS doesn't show
@@ -484,6 +520,27 @@ in
     SETTINGS_EOF
     chown ${synapseAgentUser}:aicoders ${synapseAgentHome}/.claude/settings.json
     chmod 600 ${synapseAgentHome}/.claude/settings.json
+
+    # Write infracost claude settings.json (with ANTHROPIC_BASE_URL)
+    rm -f ${synapseAgentHome}/.claude-infracost/settings.json
+    cat > ${synapseAgentHome}/.claude-infracost/settings.json <<'SETTINGS_EOF'
+    ${builtins.toJSON claudeSettingsInfracost}
+    SETTINGS_EOF
+    chown ${synapseAgentUser}:aicoders ${synapseAgentHome}/.claude-infracost/settings.json
+    chmod 600 ${synapseAgentHome}/.claude-infracost/settings.json
+
+    # Write infracost codex config.toml (tokenomics gateway provider)
+    cat > ${synapseAgentHome}/.codex-infracost/config.toml <<'CODEX_TOML_EOF'
+    model_provider = "tokenomics"
+
+    [model_providers.tokenomics]
+    name = "Tokenomics gateway"
+    base_url = "https://tokenomics-gateway.internal.dev.infracost.io"
+    wire_api = "responses"
+    requires_openai_auth = true
+    CODEX_TOML_EOF
+    chown ${synapseAgentUser}:aicoders ${synapseAgentHome}/.codex-infracost/config.toml
+    chmod 600 ${synapseAgentHome}/.codex-infracost/config.toml
 
     # Merge mcpServers into ~/.claude.json
     CLAUDE_JSON="${synapseAgentHome}/.claude.json"
