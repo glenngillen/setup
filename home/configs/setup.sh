@@ -29,6 +29,9 @@ setup() {
         status)
             _setup_status "$@"
             ;;
+        auth)
+            _setup_auth "$@"
+            ;;
         edit)
             _setup_edit "$@"
             ;;
@@ -58,6 +61,7 @@ Commands:
   upgrade <target>  Upgrade a component:
                       nix   - upgrade Determinate Nix
                       brew  - upgrade Homebrew packages
+  auth              Re-authenticate with FlakeHub (refresh expired token)
   status            Show system status
   edit              Open config in \$EDITOR
   clean [level]     Garbage collect and reclaim disk space:
@@ -121,6 +125,11 @@ _setup_upgrade() {
             return 1
             ;;
     esac
+}
+
+_setup_auth() {
+    echo "Re-authenticating with FlakeHub..."
+    sudo determinate-nixd login
 }
 
 _setup_status() {
