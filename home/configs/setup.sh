@@ -194,6 +194,7 @@ _setup_clean() {
 }
 
 _setup_clean_usage() {
-    local store_size=$(du -sh /nix/store 2>/dev/null | cut -f1)
+    # Use command to bypass shell aliases (du -> dust)
+    local store_size=$(command du -sh /nix/store 2>/dev/null | cut -f1)
     echo "Nix store: ${store_size:-unknown}"
 }
