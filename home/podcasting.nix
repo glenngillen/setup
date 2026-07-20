@@ -11,15 +11,16 @@
 
     global.brewfile = true;
 
-    masApps = {
-    };
-
     casks = [
-      "superhuman"
-      "vlc"
-      "trader-workstation"
-      "shortcat"
+      "screenflow"
+      "descript"
     ];
-  };
 
+    brews = [
+    ];
+
+    masApps = {
+      "Teleprompter: Floating Notes" = 1559566851;
+    };
+  };
 }

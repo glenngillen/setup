@@ -11,15 +11,14 @@
 
     global.brewfile = true;
 
-    masApps = {
-    };
-
     casks = [
-      "superhuman"
-      "vlc"
-      "trader-workstation"
-      "shortcat"
+      "discord"
+      "slack"
+      "whatsapp"
+      "signal"
+    ];
+
+    brews = [
     ];
   };
-
 }

@@ -7,7 +7,12 @@ export default {
       browser: "Google Chrome",
       profile: "Work",
     },
-
+    {
+      // Open these urls in Chrome
+      match: ["claude.ai/*", "app.commonroom.io/*", "login.commonroom.io/*"],
+      browser: "Google Chrome",
+      profile: "Work",
+    },
     // Notion
     {
       match: ["notion.so/*"],

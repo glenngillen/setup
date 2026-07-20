@@ -17,7 +17,7 @@
     stateVersion = "25.05";
     sessionVariables = {
       GOBIN = "$HOME/go/bin";
-      PATH = "$HOME/Development/infracost/cli-poc/bin:$HOME/go/bin:$PATH";
+      PATH = "$HOME/go/bin:$PATH";
     };
 
     # create .hushlogin file to suppress login messages

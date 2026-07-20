@@ -72,6 +72,8 @@
       "sqlite"
       "starship"
       "xh" # curl alternative
+      "zig@0.15"
+      "xcodegen"
     ];
 
     casks = [

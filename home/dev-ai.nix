@@ -6,26 +6,22 @@
   ...
 }:
 let
-  codexUser = "_codex";
-  codexHome = "/private/var/lib/codex";
   synapseAgentUser = "_synapseagent";
   synapseAgentHome = "/var/synapse/agent-home";
-  claudeUser = "_claude";
-  claudeHome = "/private/var/lib/claude";
   gitName = "Glenn Gillen";
   gitEmail = "me@glenngillen.com";
   primaryUserHome = "/Users/${primaryUser}";
 
-  # MCP server configuration (shared between gg and _claude)
+  # MCP server configuration (shared between gg and _synapseagent)
   mcpConfig = {
     mcpServers = {
     };
   };
 
-  # Shared Claude Code settings (source of truth for both gg and _claude)
+  # Shared Claude Code settings (source of truth for both gg and _synapseagent)
   baseClaudeSettings = builtins.fromJSON (builtins.readFile ./configs/claude.settings.json);
 
-  # _claude user gets the shared settings + LSP tool + extra plugins
+  # _synapseagent gets the shared settings + LSP tool + extra plugins
   claudeSettings = baseClaudeSettings // {
     env = baseClaudeSettings.env // {
       ENABLE_LSP_TOOL = "1";
@@ -56,7 +52,7 @@ let
     "/etc/profiles/per-user/${primaryUser}/bin"
   ];
 
-  codexAsUser = pkgs.writeShellScriptBin "codex-as-codexuser" ''
+  codexAsUser = pkgs.writeShellScriptBin "codex-as-agent" ''
     set -euo pipefail
 
     CWD="/tmp"
@@ -83,14 +79,21 @@ let
     export COLORTERM="''${COLORTERM:-xterm-ghostty}"
     export LANG="''${LANG:-}"
     export LC_ALL="''${LC_ALL:-}"
+    if [ -z "$GH_TOKEN_VALUE" ] && command -v gh >/dev/null 2>&1; then
+      GH_TOKEN_VALUE="$(gh auth token 2>/dev/null || true)"
+    fi
     export GH_TOKEN="$GH_TOKEN_VALUE"
     export CARGO_TARGET_DIR="$CARGO_TARGET_DIR_VALUE"
     if [ -n "$HTTPS_PROXY_VALUE" ]; then
       export HTTPS_PROXY="$HTTPS_PROXY_VALUE"
     fi
-    export GIT_CONFIG_COUNT=1
+    export GIT_CONFIG_COUNT=3
     export GIT_CONFIG_KEY_0=safe.directory
     export GIT_CONFIG_VALUE_0="$CWD"
+    export GIT_CONFIG_KEY_1=user.name
+    export GIT_CONFIG_VALUE_1="${gitName}"
+    export GIT_CONFIG_KEY_2=user.email
+    export GIT_CONFIG_VALUE_2="${gitEmail}"
     export PATH="${synapseAgentHome}/.cargo/bin:${synapseAgentHome}/.local/bin:${toolchainPath}:$PATH"
     umask 0002
 
@@ -133,7 +136,7 @@ let
     fi
   '';
 
-  claudeAsUser = pkgs.writeShellScriptBin "claude-as-claudeuser" ''
+  claudeAsUser = pkgs.writeShellScriptBin "claude-as-agent" ''
     set -euo pipefail
 
     CWD="/tmp"
@@ -164,14 +167,21 @@ let
     export COLORTERM="''${COLORTERM:-}"
     export LANG="''${LANG:-}"
     export LC_ALL="''${LC_ALL:-}"
+    if [ -z "$GH_TOKEN_VALUE" ] && command -v gh >/dev/null 2>&1; then
+      GH_TOKEN_VALUE="$(gh auth token 2>/dev/null || true)"
+    fi
     export GH_TOKEN="$GH_TOKEN_VALUE"
     export CARGO_TARGET_DIR="$CARGO_TARGET_DIR_VALUE"
     if [ -n "$HTTPS_PROXY_VALUE" ]; then
       export HTTPS_PROXY="$HTTPS_PROXY_VALUE"
     fi
-    export GIT_CONFIG_COUNT=1
+    export GIT_CONFIG_COUNT=3
     export GIT_CONFIG_KEY_0=safe.directory
     export GIT_CONFIG_VALUE_0="$CWD"
+    export GIT_CONFIG_KEY_1=user.name
+    export GIT_CONFIG_VALUE_1="${gitName}"
+    export GIT_CONFIG_KEY_2=user.email
+    export GIT_CONFIG_VALUE_2="${gitEmail}"
     export IS_DEMO="$IS_DEMO_VALUE"
     export AWS_EC2_METADATA_DISABLED=true
     export PATH="${synapseAgentHome}/.cargo/bin:${synapseAgentHome}/.local/bin:${toolchainPath}:$PATH"
@@ -340,7 +350,7 @@ let
       # macOS merges permissions into existing ACEs for the same group and
       # won't create duplicate entries. This handles both items with no ACL
       # and items with partial inherited ACLs (e.g. directories created by
-      # _codex/_claude that inherit a reduced permission set).
+      # _synapseagent that inherit a reduced permission set).
       echo "Applying ACLs..."
       /usr/bin/find "$root" -type d -exec /bin/chmod +a "$ACL_DIR_COLLAB" {} +
       /usr/bin/find "$root" -type f -exec /bin/chmod +a "$ACL_FILE_COLLAB" {} +
@@ -354,7 +364,7 @@ let
       fi
     done
 
-    # Parents (so _codex/_claude can reach the tree under /Users/gg)
+    # Parents (so _synapseagent can reach the tree under /Users/gg)
     for path in "$@"; do
       ensure_parent_acls "$path"
       abs="$(cd "$path" && pwd -P)"
@@ -384,14 +394,14 @@ in
     secrets."CLAUDE_CODE_OAUTH_TOKEN" = {
       sopsFile = ../secrets/claude-oauth.env;
       format = "dotenv";
-      owner = claudeUser;
+      owner = synapseAgentUser;
       group = "aicoders";
       mode = "0440";
     };
     secrets."CLAUDE_CODE_OAUTH_TOKEN_INFRACOST" = {
       sopsFile = ../secrets/claude-oauth-infracost.env;
       format = "dotenv";
-      owner = claudeUser;
+      owner = synapseAgentUser;
       group = "aicoders";
       mode = "0440";
     };
@@ -404,13 +414,14 @@ in
     aicoderPerms
     pkgs.llm-agents.rtk
 
-    # Development languages and tools (available to all users including _claude/_codex)
+    # Development languages and tools (available to all users including _synapseagent)
     nodejs_22 # or nodejs-slim if you don't need npm
     bun
     deno
     cargo
     rustc
     rust-analyzer
+    rustfmt
     python312
     uv # Python package manager
     go
@@ -428,72 +439,43 @@ in
   ];
 
   users.knownUsers = [
-    codexUser
-    claudeUser
+    synapseAgentUser
   ];
 
   users.knownGroups = [ "aicoders" ];
   users.groups.aicoders = {
     gid = 4210;
     members = [
-      "_codex"
-      "_claude"
       "_synapseagent"
       primaryUser
     ];
   };
 
-  users.users.${codexUser} = {
-    uid = 4200;
-    gid = 4210;
-    description = "Restricted service user for Codex";
-    home = codexHome;
-    createHome = true;
-    isHidden = true;
-    shell = null;
-  };
-
-  users.users.${claudeUser} = {
-    uid = 4201;
-    gid = 4210;
-    description = "Restricted service user for Claude";
-    home = claudeHome;
+  users.users.${synapseAgentUser} = {
+    uid = 319;
+    gid = 319;
+    description = "Synapse agent service user";
+    home = synapseAgentHome;
     createHome = true;
     isHidden = true;
     shell = null;
   };
 
   system.activationScripts.postActivation.text = ''
-    echo "setting up codex home..." >&2
-    mkdir -p ${codexHome}/.config ${codexHome}/.cache ${codexHome}/.local/share ${codexHome}/.local/bin
-    chmod 700 ${codexHome}
+    echo "setting up synapse agent home..." >&2
+    mkdir -p ${synapseAgentHome}/.claude ${synapseAgentHome}/.config ${synapseAgentHome}/.cache ${synapseAgentHome}/.local/share ${synapseAgentHome}/.local/bin ${synapseAgentHome}/.claude-infracost
+    chown -R ${synapseAgentUser}:aicoders ${synapseAgentHome}
 
     # Create a login keychain for the service user so macOS doesn't show
     # "Keychain Not Found" popups. Left locked so nothing writes to it;
     # the tool falls back to file-based credential storage.
-    CODEX_KC="${codexHome}/Library/Keychains/login.keychain-db"
-    if [ ! -f "$CODEX_KC" ]; then
-      mkdir -p "$(dirname "$CODEX_KC")"
-      sudo -u ${codexUser} -H env HOME=${codexHome} /usr/bin/security create-keychain -p "" "$CODEX_KC"
-      sudo -u ${codexUser} -H env HOME=${codexHome} /usr/bin/security default-keychain -s "$CODEX_KC"
-      sudo -u ${codexUser} -H env HOME=${codexHome} /usr/bin/security lock-keychain "$CODEX_KC"
+    SA_KC="${synapseAgentHome}/Library/Keychains/login.keychain-db"
+    if [ ! -f "$SA_KC" ]; then
+      mkdir -p "$(dirname "$SA_KC")"
+      sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security create-keychain -p "" "$SA_KC"
+      sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security default-keychain -s "$SA_KC"
+      sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security lock-keychain "$SA_KC"
     fi
-
-    echo "setting up claude home..." >&2
-    mkdir -p ${claudeHome}/.config ${claudeHome}/.cache ${claudeHome}/.local/share ${claudeHome}/.local/bin ${claudeHome}/.claude-infracost
-    chmod 700 ${claudeHome}
-
-    CLAUDE_KC="${claudeHome}/Library/Keychains/login.keychain-db"
-    if [ ! -f "$CLAUDE_KC" ]; then
-      mkdir -p "$(dirname "$CLAUDE_KC")"
-      sudo -u ${claudeUser} -H env HOME=${claudeHome} /usr/bin/security create-keychain -p "" "$CLAUDE_KC"
-      sudo -u ${claudeUser} -H env HOME=${claudeHome} /usr/bin/security default-keychain -s "$CLAUDE_KC"
-      sudo -u ${claudeUser} -H env HOME=${claudeHome} /usr/bin/security lock-keychain "$CLAUDE_KC"
-    fi
-
-    echo "setting up synapse agent home..." >&2
-    mkdir -p ${synapseAgentHome}/.claude ${synapseAgentHome}/.config ${synapseAgentHome}/.cache ${synapseAgentHome}/.local/share ${synapseAgentHome}/.local/bin ${synapseAgentHome}/.claude-infracost
-    chown -R ${synapseAgentUser}:aicoders ${synapseAgentHome}
 
     # Write claude settings.json
     rm -f ${synapseAgentHome}/.claude/settings.json
@@ -522,7 +504,7 @@ in
 
     # Install rustup components as _synapseagent
     if command -v rustup >/dev/null 2>&1; then
-      sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} PATH="/run/current-system/sw/bin:${synapseAgentHome}/.cargo/bin:/opt/homebrew/bin:$PATH" rustup component add rust-analyzer 2>/dev/null || true
+      sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} PATH="/run/current-system/sw/bin:${synapseAgentHome}/.cargo/bin:/opt/homebrew/bin:$PATH" rustup component add rust-analyzer rustfmt 2>/dev/null || true
     fi
 
     # Install and enable plugins as _synapseagent
@@ -626,15 +608,18 @@ in
       };
     };
 
-  home-manager.users.${codexUser} = {
+  home-manager.users.${synapseAgentUser} = {
     sops.age.sshKeyPaths = [ ];
     home = {
       stateVersion = "25.05";
-      homeDirectory = codexHome;
+      homeDirectory = synapseAgentHome;
     };
     programs.rtk-hooks = {
       enable = true;
-      integrations.codex.enable = true;
+      integrations = {
+        claude.enable = true;
+        codex.enable = true;
+      };
     };
     programs.git = {
       enable = true;
@@ -657,114 +642,7 @@ in
     };
   };
 
-  home-manager.users.${claudeUser} =
-    { lib, pkgs, ... }:
-    {
-      sops.age.sshKeyPaths = [ ];
-      programs.rtk-hooks = {
-        enable = true;
-        integrations.claude.enable = true;
-      };
-      home = {
-        stateVersion = "25.05";
-        homeDirectory = claudeHome;
-
-        # Write settings.json as a regular file (not a symlink) so that
-        # `claude plugin install` can update it. Nix re-seeds the content
-        # on each rebuild, and the plugin installer can layer on top.
-        activation.claudeSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-                  mkdir -p ${claudeHome}/.claude
-                  rm -f ${claudeHome}/.claude/settings.json
-                  cat > ${claudeHome}/.claude/settings.json <<'SETTINGS_EOF'
-          ${builtins.toJSON claudeSettings}
-          SETTINGS_EOF
-                  chown ${claudeUser}:aicoders ${claudeHome}/.claude/settings.json
-                  chmod 600 ${claudeHome}/.claude/settings.json
-
-                  # Merge mcpServers into ~/.claude.json (Claude Code manages this file;
-                  # we only upsert the mcpServers key so we don't clobber other state).
-                  CLAUDE_JSON="${claudeHome}/.claude.json"
-                  if [ ! -f "$CLAUDE_JSON" ]; then
-                    echo '{}' > "$CLAUDE_JSON"
-                    chown ${claudeUser}:aicoders "$CLAUDE_JSON"
-                    chmod 600 "$CLAUDE_JSON"
-                  fi
-                  ${pkgs.python3}/bin/python3 -c "
-          import json, sys
-          path = sys.argv[1]
-          with open(path) as f:
-              d = json.load(f)
-          d['mcpServers'] = json.loads(sys.argv[2])
-          with open(path, 'w') as f:
-              json.dump(d, f, indent=2)
-          " "$CLAUDE_JSON" '${builtins.toJSON mcpConfig.mcpServers}'
-        '';
-
-        activation.claudePlugins = lib.hm.dag.entryAfter [ "claudeSettings" ] ''
-          if [ -x /opt/homebrew/bin/claude ]; then
-            CLAUDE_ENV="HOME=${claudeHome} PATH=/run/current-system/sw/bin:/opt/homebrew/bin:$PATH"
-
-            # Marketplaces
-            env $CLAUDE_ENV /opt/homebrew/bin/claude plugin marketplace add infracost/agent-skills 2>/dev/null || true
-            env $CLAUDE_ENV /opt/homebrew/bin/claude plugin marketplace add /Users/${primaryUser}/Development/personal/synapse/.claude-marketplace 2>/dev/null || true
-
-            # Infracost plugin
-            env $CLAUDE_ENV /opt/homebrew/bin/claude plugin install infracost@infracost 2>/dev/null || true
-
-            # Official LSP plugins
-            for plugin in \
-              swift-lsp \
-              rust-analyzer-lsp \
-              typescript-lsp \
-              pyright-lsp \
-              gopls-lsp \
-              ruby-lsp \
-            ; do
-              env $CLAUDE_ENV /opt/homebrew/bin/claude plugin install "$plugin@claude-plugins-official" 2>/dev/null || true
-            done
-
-            # Synapse marketplace plugins
-            for plugin in \
-              spec-language-server \
-              bash-language-server \
-              svelte-lsp \
-              terraform-ls \
-              astro-lsp \
-            ; do
-              env $CLAUDE_ENV /opt/homebrew/bin/claude plugin install "$plugin@synapse" 2>/dev/null || true
-            done
-          fi
-        '';
-      };
-      programs.git = {
-        enable = true;
-        settings = {
-          init.defaultBranch = "main";
-          user.name = gitName;
-          user.email = gitEmail;
-          "credential \"https://github.com\"".helper = [
-            ""
-            "!/opt/homebrew/bin/gh auth git-credential"
-          ];
-          "credential \"https://gist.github.com\"".helper = [
-            ""
-            "!/opt/homebrew/bin/gh auth git-credential"
-          ];
-        };
-      };
-      programs.tmux = {
-        enable = true;
-      };
-    };
   security.sudo.extraConfig = ''
-    ${primaryUser} ALL=(${claudeUser}) NOPASSWD: ${lib.getExe claudeAsUser}
-    ${primaryUser} ALL=(${codexUser}) NOPASSWD: ${lib.getExe codexAsUser}
-    ${primaryUser} ALL=(_synapseagent) NOPASSWD: ALL
-
-    ${claudeUser} ALL=(${claudeUser}) NOPASSWD: ${lib.getExe claudeAsUser}
-    ${claudeUser} ALL=(${codexUser}) NOPASSWD: ALL
-    ${codexUser} ALL=(${claudeUser}) NOPASSWD: ALL
-    ${claudeUser} ALL=(_synapseagent) NOPASSWD: ALL
-    ${codexUser} ALL=(_synapseagent) NOPASSWD: ALL
+    ${primaryUser} ALL=(${synapseAgentUser}) NOPASSWD: ALL
   '';
 }

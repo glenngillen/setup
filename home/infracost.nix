@@ -31,11 +31,11 @@
 
       "notion"
       "notion-calendar"
-      "linear-linear"
+      "linear"
       "loom"
 
       "visual-studio-code"
-      "windsurf"
+      "devin-desktop"
       "cursor"
       "antigravity"
 
@@ -43,6 +43,8 @@
 
     ];
     brews = [
+      "infracost"
+
       "kubectl"
       "docker"
 

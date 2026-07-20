@@ -11,15 +11,12 @@
 
     global.brewfile = true;
 
-    masApps = {
-    };
-
+    # homebrew is best for GUI apps
+    # nixpkgs is best for CLI tools
     casks = [
-      "superhuman"
-      "vlc"
-      "trader-workstation"
-      "shortcat"
+      "jupyterlab"
+    ];
+    brews = [
     ];
   };
-
 }
