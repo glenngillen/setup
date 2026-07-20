@@ -5,7 +5,7 @@
 
     onActivation = {
       autoUpdate = false;
-      upgrade = true;
+      upgrade = false; # disabled: aerospace 0.21.x+ requires Ventura, breaks brew bundle upgrade
       cleanup = "zap";
     };
 
