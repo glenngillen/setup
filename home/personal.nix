@@ -19,6 +19,7 @@
       "vlc"
       "trader-workstation"
       "shortcat"
+      "temurin"
     ];
   };
 
