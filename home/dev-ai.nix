@@ -513,6 +513,13 @@ in
       sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security lock-keychain "$SA_KC"
     fi
 
+    # Inline RTK.md into codex AGENTS.md (codex resolves @includes relative
+    # to the project dir, not ~/.codex, so the @RTK.md reference breaks)
+    if [ -f ${synapseAgentHome}/.codex/RTK.md ] && [ -f ${synapseAgentHome}/.codex/AGENTS.md ]; then
+      cp ${synapseAgentHome}/.codex/RTK.md ${synapseAgentHome}/.codex/AGENTS.md
+      chown ${synapseAgentUser}:aicoders ${synapseAgentHome}/.codex/AGENTS.md
+    fi
+
     # Write claude settings.json
     rm -f ${synapseAgentHome}/.claude/settings.json
     cat > ${synapseAgentHome}/.claude/settings.json <<'SETTINGS_EOF'
