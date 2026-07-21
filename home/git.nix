@@ -17,7 +17,7 @@
         defaultBranch = "main";
       };
       core = {
-        editor = "zeditor --wait";
+        editor = "zed --wait";
       };
     };
   };

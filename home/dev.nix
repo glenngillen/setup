@@ -132,15 +132,13 @@
         # heroku
         hk = "heroku";
 
-        zed = "zeditor";
-
         # commands starting with % for pasting from web
         "%" = " ";
 
       };
 
       sessionVariables = {
-        EDITOR = "zeditor";
+        EDITOR = "zed";
       };
 
       file.".config/fzf-git.sh".source = ./configs/fzf-git.sh;
