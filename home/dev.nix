@@ -74,6 +74,7 @@
       "xh" # curl alternative
       "zig@0.15"
       "xcodegen"
+      "libpq"
     ];
 
     casks = [
@@ -150,7 +151,7 @@
       zsh = {
         enable = true;
         initContent = ''
-          export PATH="/opt/homebrew/opt/zig@0.15/bin:$PATH"
+          export PATH="/opt/homebrew/opt/zig@0.15/bin:/opt/homebrew/opt/libpq/bin:$PATH"
           eval $(zoxide init zsh); source ~/.config/fzf-git.sh
         '';
         shellAliases = {
