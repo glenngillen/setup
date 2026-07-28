@@ -10,7 +10,7 @@
 
     onActivation = {
       autoUpdate = false;
-      upgrade = false;
+      upgrade = true;
       cleanup = "zap";
     };
 

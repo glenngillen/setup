@@ -1,4 +1,8 @@
 {
+  "attribution": {
+    "pr": "",
+    "commit": ""
+  },
   "permissions": {
     "allow": ["Bash(npm run lint)", "Bash(npm run test:*)", "Read(~/.zshrc)"],
     "deny": ["Read(./.env)", "Read(./.env.*)", "Read(./secrets/**)"]

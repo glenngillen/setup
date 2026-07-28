@@ -160,7 +160,7 @@ let
       --cwd "$CWD_REAL"
       --gh-token "$GH_TOKEN_VALUE"
       --token-profile "$TOKEN_PROFILE"
-      --cargo-target-dir "''${CARGO_TARGET_DIR:-}"
+      --cargo-target-dir "''${CARGO_TARGET_DIR:-${synapseAgentHome}/.cache/synapse/target/$(basename "$CWD_REAL")}"
       "''${HTTPS_PROXY_ARGS[@]}"
       -- "''${PASSTHROUGH_ARGS[@]}"
     )
@@ -308,7 +308,7 @@ let
       --cwd "$CWD_REAL"
       --gh-token "$GH_TOKEN_VALUE"
       --token-profile "$TOKEN_PROFILE"
-      --cargo-target-dir "''${CARGO_TARGET_DIR:-}"
+      --cargo-target-dir "''${CARGO_TARGET_DIR:-${synapseAgentHome}/.cache/synapse/target/$(basename "$CWD_REAL")}"
       "''${HTTPS_PROXY_ARGS[@]}"
       "''${IS_DEMO_ARGS[@]}"
       -- "''${PASSTHROUGH_ARGS[@]}"
@@ -630,7 +630,7 @@ in
 
     onActivation = {
       autoUpdate = false;
-      upgrade = false;
+      upgrade = true;
       cleanup = "zap";
     };
 

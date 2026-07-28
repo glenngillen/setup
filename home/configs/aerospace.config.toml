@@ -287,10 +287,6 @@ exec-on-workspace-change = ['~/.config/aerospace/aerospace-workspace-change.sh']
     check-further-callbacks = true
     run = ['layout floating', 'move-node-to-workspace P']
 
-[[on-window-detected]]
-    if.app-id = 'com.stonelightpictures.Webcam-Effects-AS'
-    check-further-callbacks = true
-    run = ['layout floating', 'move-node-to-workspace V']
 
 [[on-window-detected]]
     if.app-id = 'co.boomvision.boom.macos'

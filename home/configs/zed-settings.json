@@ -1,5 +1,8 @@
 {
   "vim_mode": true,
+  "vim": {
+    "use_system_clipboard": "on_yank"
+  },
   "buffer_font_family": "FiraCode Nerd Font Mono",
   "ui_font_size": 16,
   "buffer_font_size": 15,
@@ -40,7 +43,7 @@
   "confirm_quit": true,
   "current_line_highlight": "all",
   "selection_highlight": true,
-  "hide_mouse": "on_typing_and_movement",
+  "hide_mouse": "on_typing_and_action",
   "scrollbar": {
     "show": "auto",
     "cursors": true,

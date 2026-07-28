@@ -15,6 +15,7 @@
   home = {
     username = primaryUser;
     stateVersion = "25.05";
+    sessionPath = [ "$HOME/.local/bin" ];
     sessionVariables = {
       GOBIN = "$HOME/go/bin";
       PATH = "$HOME/go/bin:$PATH";

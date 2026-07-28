@@ -38,7 +38,7 @@
 
     onActivation = {
       autoUpdate = false;
-      upgrade = false;
+      upgrade = true;
       cleanup = "zap";
     };
 
@@ -90,7 +90,9 @@
       "Patterns" = 429449079;
     };
   };
-  home-manager.users.${primaryUser} = {
+  home-manager.users.${primaryUser} =
+    { lib, ... }:
+    {
     home = {
 
       packages = [
@@ -144,8 +146,26 @@
 
       file.".config/fzf-git.sh".source = ./configs/fzf-git.sh;
       file."/Library/Application\ Support/com.mitchellh.ghostty/config".source = ./configs/ghostty.config;
-      file.".config/zed/settings.json".source = ./configs/zed-settings.json;
     };
+
+    home.activation.zedSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      settings_dir="$HOME/.config/zed"
+      settings_file="$settings_dir/settings.json"
+      settings_tmp="$settings_dir/.settings.json.tmp"
+
+      mkdir -p "$settings_dir"
+      if [ -f "$settings_file" ] && [ ! -L "$settings_file" ]; then
+        # Preserve settings written by Zed while keeping Nix-managed values
+        # authoritative when the same key exists in both files.
+        ${pkgs.jq}/bin/jq -s '.[1] * .[0]' \
+          ${./configs/zed-settings.json} "$settings_file" > "$settings_tmp"
+      else
+        cp ${./configs/zed-settings.json} "$settings_tmp"
+      fi
+      rm -f "$settings_file"
+      install -m 0644 "$settings_tmp" "$settings_file"
+      rm -f "$settings_tmp"
+    '';
 
     programs = {
       zsh = {
@@ -164,7 +184,7 @@
       };
 
     };
-  };
+    };
   programs = {
     gnupg.agent = {
       enable = true;
