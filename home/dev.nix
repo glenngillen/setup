@@ -4,6 +4,44 @@
   inputs,
   ...
 }:
+let
+  # Zed writes JSONC (trailing commas, comments) to its settings.json, which
+  # jq refuses to parse, so merge with a JSON5-tolerant parser instead.
+  mergeZedSettings =
+    pkgs.writers.writePython3Bin "merge-zed-settings"
+      {
+        libraries = [ pkgs.python3Packages.json5 ];
+      }
+      ''
+        """Merge Nix-managed Zed settings over Zed's own settings.json.
+
+        Usage: merge-zed-settings <nix.json> <live.json>
+        Writes the merged result to stdout; Nix-managed keys win.
+        """
+        import json
+        import pathlib
+        import sys
+
+        import json5
+
+
+        def merge(base, overrides):
+            result = dict(base)
+            for key, value in overrides.items():
+                if isinstance(value, dict) and isinstance(result.get(key), dict):
+                    result[key] = merge(result[key], value)
+                else:
+                    result[key] = value
+            return result
+
+
+        nix = json.loads(pathlib.Path(sys.argv[1]).read_text())
+        live = json5.loads(pathlib.Path(sys.argv[2]).read_text())
+
+        json.dump(merge(live, nix), sys.stdout, indent=2)
+        sys.stdout.write("\n")
+      '';
+in
 {
   nixpkgs.overlays = [
     (
@@ -157,7 +195,7 @@
       if [ -f "$settings_file" ] && [ ! -L "$settings_file" ]; then
         # Preserve settings written by Zed while keeping Nix-managed values
         # authoritative when the same key exists in both files.
-        ${pkgs.jq}/bin/jq -s '.[1] * .[0]' \
+        ${mergeZedSettings}/bin/merge-zed-settings \
           ${./configs/zed-settings.json} "$settings_file" > "$settings_tmp"
       else
         cp ${./configs/zed-settings.json} "$settings_tmp"
