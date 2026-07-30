@@ -49,6 +49,57 @@ let
     };
   };
 
+  # Preferred codex settings, merged into every codex config we manage:
+  # the primary user's ~/.codex/config.toml and the agent's infracost profile.
+  # Codex writes to these files itself (trust levels, project entries), so
+  # they are merged rather than replaced with a store symlink.
+  codexSettings = {
+    check_for_update_on_startup = false;
+  };
+
+  # Merges the declared settings into a config.toml in place, leaving
+  # everything codex wrote itself untouched.
+  mergeCodexSettings =
+    pkgs.writers.writePython3Bin "merge-codex-settings"
+      {
+        libraries = [ pkgs.python3Packages.tomlkit ];
+      }
+      ''
+        """Merge settings into a codex config.toml in place.
+
+        Usage: merge-codex-settings <config.toml> <settings-json>
+        Only keys present in the JSON are touched.
+        """
+        import json
+        import pathlib
+        import sys
+
+        import tomlkit
+
+
+        def merge(target, updates):
+            for key, value in updates.items():
+                if isinstance(value, dict):
+                    if not isinstance(target.get(key), dict):
+                        target[key] = tomlkit.table()
+                    merge(target[key], value)
+                elif target.get(key) != value:
+                    target[key] = value
+
+
+        path = pathlib.Path(sys.argv[1])
+        before = path.read_text() if path.exists() else ""
+
+        doc = tomlkit.parse(before)
+        merge(doc, json.loads(sys.argv[2]))
+        after = tomlkit.dumps(doc)
+
+        if after != before:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(after)
+            print("updated " + str(path), file=sys.stderr)
+      '';
+
   # Shared toolchain PATH: prioritize nix system packages, then homebrew
   toolchainPath = lib.concatStringsSep ":" [
     "/run/current-system/sw/bin" # System packages (nodejs, cargo, etc.)
@@ -103,7 +154,7 @@ let
     export GIT_CONFIG_VALUE_1="${gitName}"
     export GIT_CONFIG_KEY_2=user.email
     export GIT_CONFIG_VALUE_2="${gitEmail}"
-    export PATH="${synapseAgentHome}/.cargo/bin:${synapseAgentHome}/.local/bin:${toolchainPath}:$PATH"
+    export PATH="${synapseAgentHome}/.cargo/bin:${synapseAgentHome}/.local/bin:${toolchainPath}:/Users/${primaryUser}/Development/personal/synapse/target/debug:$PATH"
 
     # Select codex config directory based on profile
     case "$TOKEN_PROFILE" in
@@ -499,7 +550,7 @@ in
 
   system.activationScripts.postActivation.text = ''
     echo "setting up synapse agent home..." >&2
-    mkdir -p ${synapseAgentHome}/.claude ${synapseAgentHome}/.config ${synapseAgentHome}/.cache ${synapseAgentHome}/.local/share ${synapseAgentHome}/.local/bin ${synapseAgentHome}/.claude-infracost ${synapseAgentHome}/.codex-infracost
+    mkdir -p ${synapseAgentHome}/.claude ${synapseAgentHome}/.config ${synapseAgentHome}/.cache ${synapseAgentHome}/.local/share ${synapseAgentHome}/.local/bin ${synapseAgentHome}/.claude-infracost ${synapseAgentHome}/.codex ${synapseAgentHome}/.codex-infracost
     chown -R ${synapseAgentUser}:aicoders ${synapseAgentHome}
 
     # Create a login keychain for the service user so macOS doesn't show
@@ -546,8 +597,18 @@ in
     wire_api = "responses"
     requires_openai_auth = true
     CODEX_TOML_EOF
+    ${mergeCodexSettings}/bin/merge-codex-settings \
+      ${synapseAgentHome}/.codex-infracost/config.toml \
+      ${lib.escapeShellArg (builtins.toJSON codexSettings)}
     chown ${synapseAgentUser}:aicoders ${synapseAgentHome}/.codex-infracost/config.toml
     chmod 600 ${synapseAgentHome}/.codex-infracost/config.toml
+
+    # Merge preferred settings into the agent's default codex profile
+    ${mergeCodexSettings}/bin/merge-codex-settings \
+      ${synapseAgentHome}/.codex/config.toml \
+      ${lib.escapeShellArg (builtins.toJSON codexSettings)}
+    chown ${synapseAgentUser}:aicoders ${synapseAgentHome}/.codex/config.toml
+    chmod 600 ${synapseAgentHome}/.codex/config.toml
 
     # Merge mcpServers into ~/.claude.json
     CLAUDE_JSON="${synapseAgentHome}/.claude.json"
@@ -658,6 +719,14 @@ in
     {
       home.file.".claude/CLAUDE.md".source = ./configs/agent.md;
       home.file.".claude/settings.json".source = ./configs/claude.settings.json;
+
+      # ~/.codex/config.toml is codex's own file (it appends project trust
+      # levels), so merge the preferred settings in instead of managing it.
+      home.activation.codexSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        run ${mergeCodexSettings}/bin/merge-codex-settings \
+          ${primaryUserHome}/.codex/config.toml \
+          ${lib.escapeShellArg (builtins.toJSON codexSettings)}
+      '';
 
       programs.rtk-hooks = {
         enable = true;
