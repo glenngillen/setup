@@ -197,6 +197,30 @@ in
         file."/Library/Application\ Support/com.mitchellh.ghostty/config".source = ./configs/ghostty.config;
       };
 
+      # nixpkgs replaces the interpreter's bundled RubyGems with its own (see
+      # `postUnpack` in pkgs/development/interpreters/ruby) but leaves Ruby's
+      # Bundler in place, so the two arrive mismatched. A Bundler older than its
+      # RubyGems re-defines Gem::Platform constants that RubyGems already
+      # defines, and every `bundle` invocation prints a wall of "already
+      # initialized constant" warnings.
+      #
+      # RubyGems 3.x and Bundler 2.x are released together and their minors move
+      # in lockstep, so derive the wanted Bundler from whichever RubyGems we
+      # ended up with rather than hardcoding it -- otherwise the next nixpkgs
+      # RubyGems bump silently reintroduces the mismatch. GEM_HOME/bin precedes
+      # the store copy on PATH, so this shadows the bundled one.
+      home.activation.matchBundlerToRubygems = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        export PATH="${lib.makeBinPath [ pkgs.ruby_3_4 ]}:$PATH"
+        export GEM_HOME="${rubyGemHome}"
+
+        rubygems_minor="$(gem --version | cut -d. -f2)"
+        want="~> 2.''${rubygems_minor}"
+
+        if ! gem list -i bundler -v "$want" >/dev/null 2>&1; then
+          $DRY_RUN_CMD gem install bundler -v "$want" --no-document
+        fi
+      '';
+
       home.activation.zedSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         settings_dir="$HOME/.config/zed"
         settings_file="$settings_dir/settings.json"
