@@ -106,7 +106,7 @@ _setup_upgrade() {
     case "$target" in
         nix)
             echo "Upgrading Determinate Nix..."
-            sudo -i nix upgrade-nix
+            sudo determinate-nixd upgrade
             ;;
         brew)
             echo "Upgrading Homebrew packages..."

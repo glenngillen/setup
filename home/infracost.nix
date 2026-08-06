@@ -16,10 +16,18 @@
 
     global.brewfile = true;
 
-    taps = [
-      "hashicorp/tap"
-      "azure/bicep"
-    ];
+    # Homebrew 6 refuses to load formulae from third-party taps until they're
+    # trusted. `brew bundle` applies a Brewfile's `trusted:` options before it
+    # loads anything, so declaring trust here keeps activation self-contained
+    # (no out-of-band `brew trust` needed on a fresh machine).
+    #
+    # These taps live in `extraConfig` rather than `taps` because nix-darwin's
+    # tap submodule only renders `clone_target`/`force_auto_update` — it has no
+    # `trusted` option yet. Move them back once it does.
+    extraConfig = ''
+      tap "hashicorp/tap", trusted: { formulae: "terraform" }
+      tap "azure/bicep", trusted: { formulae: "bicep" }
+    '';
 
     casks = [
       "slack"
