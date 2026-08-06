@@ -512,6 +512,7 @@ in
     python312
     uv # Python package manager
     go
+    ruby_3_4 # ships bundler 2.6 + rubygems 3.7; see GEM_HOME in dev.nix
 
     # Language servers
     typescript-language-server

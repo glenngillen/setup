@@ -35,7 +35,11 @@
     enableZshIntegration = true;
   };
   programs.direnv = {
-    enable = false;
+    enable = true;
+    enableZshIntegration = true;
+    # Caches `use flake` evaluations and keeps the result GC-rooted, so entering
+    # a project shell is instant rather than a re-evaluation each cd.
+    nix-direnv.enable = true;
   };
   programs.ssh = {
     enable = true;

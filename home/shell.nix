@@ -5,8 +5,8 @@ _: {
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
 
+    # direnv's zsh hook comes from programs.direnv.enableZshIntegration.
     initContent = ''
-      eval "$(direnv hook zsh)"
       source ~/.config/nix/home/configs/setup.sh
     '';
 

@@ -41,6 +41,14 @@ let
         json.dump(merge(live, nix), sys.stdout, indent=2)
         sys.stdout.write("\n")
       '';
+
+  # nixpkgs' ruby lives read-only in the store, so a bare `gem install` tries to
+  # write into /nix/store and fails. Point GEM_HOME somewhere writable instead,
+  # scoped by Ruby version so gems don't collide across upgrades. Bundler and
+  # rubygems ship with the interpreter, so nothing needs installing to bootstrap.
+  # `version.libDir` is the gem ABI directory ("3.4.0"), which is what rubygems
+  # would have appended itself had GEM_HOME been left alone.
+  rubyGemHome = "$HOME/.gem/ruby/${pkgs.ruby_3_4.version.libDir}";
 in
 {
   nixpkgs.overlays = [
@@ -86,7 +94,7 @@ in
     # nixpkgs is best for CLI tools
     brews = [
       "aws-shell"
-      "direnv"
+      # direnv now comes from home-manager's programs.direnv (with nix-direnv)
       "bandwhich"
       "bat" # cat replacement
       "bottom" # top/htop replacement
@@ -131,97 +139,100 @@ in
   home-manager.users.${primaryUser} =
     { lib, ... }:
     {
-    home = {
+      home = {
 
-      packages = [
-        pkgs.go
-      ];
+        packages = [
+          pkgs.go
+        ];
 
-      shellAliases = {
-        ls = "eza -Ahl --git";
-        cat = "bat";
-        grep = "rg";
-        find = "fd";
-        du = "dust";
-        ps = "procs";
-        top = "btop";
-        htop = "btop";
-        ping = "gping";
-
-        cd = "z";
-
-        # git
-        gpull = "git pull";
-        gpush = "git push";
-        gfpush = "git push --force-with-lease";
-        gpr = "git pull --rebase";
-        gdiff = "git diff";
-        gcom = "git commit";
-        gca = "git commit -a";
-        gcam = "git commit -am";
-        gco = "git checkout";
-        gbr = "git branch";
-        gst = "git status";
-        grm = "git status | grep deleted | awk '{print \$3}' | xargs git rm";
-        gphm = "git push heroku master";
-        gpsm = "git push staging master";
-        gadd = "git add";
-
-        # terraform
-        tf = "terraform";
-
-        # heroku
-        hk = "heroku";
-
-        # commands starting with % for pasting from web
-        "%" = " ";
-
-      };
-
-      sessionVariables = {
-        EDITOR = "zed";
-      };
-
-      file.".config/fzf-git.sh".source = ./configs/fzf-git.sh;
-      file."/Library/Application\ Support/com.mitchellh.ghostty/config".source = ./configs/ghostty.config;
-    };
-
-    home.activation.zedSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      settings_dir="$HOME/.config/zed"
-      settings_file="$settings_dir/settings.json"
-      settings_tmp="$settings_dir/.settings.json.tmp"
-
-      mkdir -p "$settings_dir"
-      if [ -f "$settings_file" ] && [ ! -L "$settings_file" ]; then
-        # Preserve settings written by Zed while keeping Nix-managed values
-        # authoritative when the same key exists in both files.
-        ${mergeZedSettings}/bin/merge-zed-settings \
-          ${./configs/zed-settings.json} "$settings_file" > "$settings_tmp"
-      else
-        cp ${./configs/zed-settings.json} "$settings_tmp"
-      fi
-      rm -f "$settings_file"
-      install -m 0644 "$settings_tmp" "$settings_file"
-      rm -f "$settings_tmp"
-    '';
-
-    programs = {
-      zsh = {
-        enable = true;
-        initContent = ''
-          export PATH="/opt/homebrew/opt/zig@0.15/bin:/opt/homebrew/opt/libpq/bin:$PATH"
-          eval $(zoxide init zsh); source ~/.config/fzf-git.sh
-        '';
         shellAliases = {
-          reload = ". ~/.zshenv && . ~/.zshrc";
+          ls = "eza -Ahl --git";
+          cat = "bat";
+          grep = "rg";
+          find = "fd";
+          du = "dust";
+          ps = "procs";
+          top = "btop";
+          htop = "btop";
+          ping = "gping";
+
+          cd = "z";
+
+          # git
+          gpull = "git pull";
+          gpush = "git push";
+          gfpush = "git push --force-with-lease";
+          gpr = "git pull --rebase";
+          gdiff = "git diff";
+          gcom = "git commit";
+          gca = "git commit -a";
+          gcam = "git commit -am";
+          gco = "git checkout";
+          gbr = "git branch";
+          gst = "git status";
+          grm = "git status | grep deleted | awk '{print \$3}' | xargs git rm";
+          gphm = "git push heroku master";
+          gpsm = "git push staging master";
+          gadd = "git add";
+
+          # terraform
+          tf = "terraform";
+
+          # heroku
+          hk = "heroku";
+
+          # commands starting with % for pasting from web
+          "%" = " ";
+
         };
-      };
-      go.enable = true;
-      ripgrep = {
-        enable = true;
+
+        sessionVariables = {
+          EDITOR = "zed --wait";
+          GEM_HOME = rubyGemHome;
+        };
+
+        sessionPath = [ "${rubyGemHome}/bin" ];
+
+        file.".config/fzf-git.sh".source = ./configs/fzf-git.sh;
+        file."/Library/Application\ Support/com.mitchellh.ghostty/config".source = ./configs/ghostty.config;
       };
 
-    };
+      home.activation.zedSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        settings_dir="$HOME/.config/zed"
+        settings_file="$settings_dir/settings.json"
+        settings_tmp="$settings_dir/.settings.json.tmp"
+
+        mkdir -p "$settings_dir"
+        if [ -f "$settings_file" ] && [ ! -L "$settings_file" ]; then
+          # Preserve settings written by Zed while keeping Nix-managed values
+          # authoritative when the same key exists in both files.
+          ${mergeZedSettings}/bin/merge-zed-settings \
+            ${./configs/zed-settings.json} "$settings_file" > "$settings_tmp"
+        else
+          cp ${./configs/zed-settings.json} "$settings_tmp"
+        fi
+        rm -f "$settings_file"
+        install -m 0644 "$settings_tmp" "$settings_file"
+        rm -f "$settings_tmp"
+      '';
+
+      programs = {
+        zsh = {
+          enable = true;
+          initContent = ''
+            export PATH="/opt/homebrew/opt/zig@0.15/bin:/opt/homebrew/opt/libpq/bin:$PATH"
+            eval $(zoxide init zsh); source ~/.config/fzf-git.sh
+          '';
+          shellAliases = {
+            reload = ". ~/.zshenv && . ~/.zshrc";
+          };
+        };
+        go.enable = true;
+        ripgrep = {
+          enable = true;
+        };
+
+      };
     };
   programs = {
     gnupg.agent = {
