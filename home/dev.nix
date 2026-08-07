@@ -49,6 +49,16 @@ let
   # `version.libDir` is the gem ABI directory ("3.4.0"), which is what rubygems
   # would have appended itself had GEM_HOME been left alone.
   rubyGemHome = "$HOME/.gem/ruby/${pkgs.ruby_3_4.version.libDir}";
+
+  # GEM_HOME/bin has to sit ahead of /run/current-system/sw/bin so the Bundler we
+  # install there wins over the interpreter's mismatched copy -- but that also
+  # puts it ahead of /opt/homebrew/bin, so anything installed into it shadows
+  # Homebrew. There is no ordering that satisfies both. Keep application
+  # dependencies out of that directory entirely instead: `bundle install` writes
+  # here (off PATH, reached via `bundle exec`), while `gem install` still goes to
+  # GEM_HOME for tools deliberately wanted on PATH. Bundler appends its own
+  # ruby/<abi>/ underneath, so this needs no version scoping.
+  rubyBundlePath = "$HOME/.gem/bundle";
 in
 {
   nixpkgs.overlays = [
@@ -189,6 +199,7 @@ in
         sessionVariables = {
           EDITOR = "zed --wait";
           GEM_HOME = rubyGemHome;
+          BUNDLE_PATH = rubyBundlePath;
         };
 
         sessionPath = [ "${rubyGemHome}/bin" ];
