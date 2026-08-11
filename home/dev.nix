@@ -78,6 +78,8 @@ in
   environment.systemPackages = with pkgs; [
     nixd
     awscli2
+    ffmpeg
+    whisper-cpp
   ];
 
   environment.shellInit = ''
@@ -144,6 +146,7 @@ in
 
     masApps = {
       "Patterns" = 429449079;
+      "Xcode" = 497799835;
     };
   };
   home-manager.users.${primaryUser} =
