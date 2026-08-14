@@ -50,14 +50,21 @@ let
   # would have appended itself had GEM_HOME been left alone.
   rubyGemHome = "$HOME/.gem/ruby/${pkgs.ruby_3_4.version.libDir}";
 
-  # GEM_HOME/bin has to sit ahead of /run/current-system/sw/bin so the Bundler we
-  # install there wins over the interpreter's mismatched copy -- but that also
-  # puts it ahead of /opt/homebrew/bin, so anything installed into it shadows
-  # Homebrew. There is no ordering that satisfies both. Keep application
-  # dependencies out of that directory entirely instead: `bundle install` writes
-  # here (off PATH, reached via `bundle exec`), while `gem install` still goes to
-  # GEM_HOME for tools deliberately wanted on PATH. Bundler appends its own
-  # ruby/<abi>/ underneath, so this needs no version scoping.
+  # Bundler is the only thing that has to sit ahead of /run/current-system/sw/bin
+  # (to beat the interpreter's mismatched copy), so hoisting the whole of
+  # GEM_HOME/bin to achieve it is broader than the problem: that directory then
+  # also outranks /opt/homebrew/bin, and *every* binstub in it wins -- including
+  # transitive ones nobody asked for. The `tilt` gem arrives as a dependency of
+  # sinatra/haml/slim and its binstub shadowed Homebrew's Tilt, the Kubernetes
+  # tool, exactly this way. Link Bundler alone into its own directory and hoist
+  # that; GEM_HOME/bin then goes on the tail of PATH, so `gem install`ed tools
+  # stay reachable without outranking anything.
+  rubyBundlerBin = "$HOME/.gem/bundler-bin";
+
+  # `bundle install` writes here rather than into GEM_HOME, so application
+  # dependencies never reach a binstub directory at all and are reached via
+  # `bundle exec`. Bundler appends its own ruby/<abi>/ underneath, so this needs
+  # no version scoping.
   rubyBundlePath = "$HOME/.gem/bundle";
 in
 {
@@ -204,7 +211,16 @@ in
           BUNDLE_PATH = rubyBundlePath;
         };
 
-        sessionPath = [ "${rubyGemHome}/bin" ];
+        sessionPath = [ rubyBundlerBin ];
+
+        # sessionPath only ever prepends, and GEM_HOME/bin specifically must not
+        # outrank Homebrew (see rubyBundlerBin), so append it by hand. This lands
+        # in hm-session-vars.sh alongside sessionPath, which both login and
+        # non-login shells source -- putting it in zsh's initContent would limit
+        # it to interactive shells.
+        sessionVariablesExtra = ''
+          export PATH="$PATH:${rubyGemHome}/bin"
+        '';
 
         file.".config/fzf-git.sh".source = ./configs/fzf-git.sh;
         file."/Library/Application\ Support/com.mitchellh.ghostty/config".source = ./configs/ghostty.config;
@@ -220,7 +236,7 @@ in
       # RubyGems 3.x and Bundler 2.x are released together and their minors move
       # in lockstep, so derive the wanted Bundler from whichever RubyGems we
       # ended up with rather than hardcoding it -- otherwise the next nixpkgs
-      # RubyGems bump silently reintroduces the mismatch. GEM_HOME/bin precedes
+      # RubyGems bump silently reintroduces the mismatch. rubyBundlerBin precedes
       # the store copy on PATH, so this shadows the bundled one.
       home.activation.matchBundlerToRubygems = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         export PATH="${lib.makeBinPath [ pkgs.ruby_3_4 ]}:$PATH"
@@ -232,6 +248,15 @@ in
         if ! gem list -i bundler -v "$want" >/dev/null 2>&1; then
           $DRY_RUN_CMD gem install bundler -v "$want" --no-document
         fi
+
+        # The only binstubs hoisted above Homebrew. Rebuilt from scratch every
+        # activation so a Bundler upgrade cannot strand a dangling link and
+        # nothing else can accumulate in here.
+        $DRY_RUN_CMD rm -rf "${rubyBundlerBin}"
+        $DRY_RUN_CMD mkdir -p "${rubyBundlerBin}"
+        for stub in bundle bundler; do
+          $DRY_RUN_CMD ln -s "${rubyGemHome}/bin/$stub" "${rubyBundlerBin}/$stub"
+        done
       '';
 
       home.activation.zedSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
