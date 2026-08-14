@@ -110,7 +110,6 @@ in
       "bandwhich"
       "bat" # cat replacement
       "bottom" # top/htop replacement
-      "colima"
       "coreutils"
       "difftastic"
       "docker"

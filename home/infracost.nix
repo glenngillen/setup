@@ -56,8 +56,6 @@
       "kubectl"
       "docker"
 
-      "colima"
-
       "buf"
 
       "tilt"

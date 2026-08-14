@@ -11,8 +11,6 @@
       btop
       tree
 
-      colima
-
       # misc
       nil
       biome
