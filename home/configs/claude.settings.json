@@ -11,8 +11,7 @@
     "CLAUDE_CODE_ENABLE_TELEMETRY": "0",
     "OTEL_METRICS_EXPORTER": "otlp",
     "OTEL_EXPORTER_OTLP_METRICS_PROTOCOL": "http/json",
-    "OTEL_EXPORTER_OTLP_PROTOCOL": "http/json",
-    "NODE_OPTIONS": "--import /private/var/lib/claude/.claude/synapse-interceptor.mjs"
+    "OTEL_EXPORTER_OTLP_PROTOCOL": "http/json"
   },
   "enabledPlugins": {
     "swift-lsp@claude-plugins-official": true
