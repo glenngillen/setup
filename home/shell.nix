@@ -22,7 +22,7 @@ _: {
     enable = true;
     settings = {
       add_newline = false;
-      scan_timeout = 10;
+      scan_timeout = 30;
       format = builtins.concatStringsSep "" [
         "$directory"
         "$git_branch"
@@ -48,6 +48,18 @@ _: {
         success_symbol = "[➜](bold green)";
         error_symbol = "[✗](bold red)";
       };
+
+      # Starship only shells out for a version when the module's format
+      # references $version. Omitting it skips the subprocess entirely, which
+      # keeps the prompt off the 500ms command_timeout: cold, `rustc --version`
+      # takes 1.3s here (it's a bash wrapper) and `node --version` 0.4s.
+      golang.format = "[ $symbol]($style)";
+      nodejs.format = "[ $symbol]($style)";
+      ruby.format = "[ $symbol]($style)";
+      rust.format = "[ $symbol]($style)";
+      swift.format = "[ $symbol]($style)";
+      # $virtualenv comes from the environment, not a subprocess, so it stays.
+      python.format = "[ $symbol(\\($virtualenv\\) )]($style)";
       cmd_duration = {
         format = "[  $duration ]($style)";
         style = "fg:bright-white bg:18";
