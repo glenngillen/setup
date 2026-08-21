@@ -11,6 +11,7 @@ let
   gitName = "Glenn Gillen";
   gitEmail = "me@glenngillen.com";
   primaryUserHome = "/Users/${primaryUser}";
+  synapseDebugPath = "${primaryUserHome}/Development/personal/synapse/target/debug";
 
   # MCP server configuration (shared between gg and _synapseagent)
   mcpConfig = {
@@ -104,7 +105,7 @@ let
   toolchainPath = lib.concatStringsSep ":" [
     "/run/current-system/sw/bin" # System packages (nodejs, cargo, etc.)
     "${primaryUserHome}/go/bin" # Go binaries
-    "${primaryUserHome}/Development/personal/synapse/target/debug" # Synapse debug binaries
+    synapseDebugPath # Synapse debug binaries
     "/opt/homebrew/bin"
     "/opt/homebrew/sbin"
     "/etc/profiles/per-user/${primaryUser}/bin"
@@ -154,7 +155,7 @@ let
     export GIT_CONFIG_VALUE_1="${gitName}"
     export GIT_CONFIG_KEY_2=user.email
     export GIT_CONFIG_VALUE_2="${gitEmail}"
-    export PATH="${synapseAgentHome}/.cargo/bin:${synapseAgentHome}/.local/bin:${toolchainPath}:/Users/${primaryUser}/Development/personal/synapse/target/debug:$PATH"
+    export PATH="${synapseAgentHome}/.cargo/bin:${synapseAgentHome}/.local/bin:${toolchainPath}:$PATH"
 
     # Select codex config directory based on profile
     case "$TOKEN_PROFILE" in
@@ -476,6 +477,10 @@ let
   '';
 in
 {
+  # Make locally built Synapse tools available to launchd/service contexts,
+  # including commands executed as _synapseagent outside the wrappers above.
+  environment.systemPath = [ synapseDebugPath ];
+
   sops = {
     age.keyFile = "/Users/${primaryUser}/.config/sops/age/keys.txt";
     secrets."CLAUDE_CODE_OAUTH_TOKEN" = {

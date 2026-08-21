@@ -15,7 +15,10 @@
   home = {
     username = primaryUser;
     stateVersion = "25.05";
-    sessionPath = [ "$HOME/.local/bin" ];
+    sessionPath = [
+      "$HOME/.local/bin"
+      "/Users/${primaryUser}/Development/personal/synapse/target/debug"
+    ];
     sessionVariables = {
       GOBIN = "$HOME/go/bin";
       PATH = "$HOME/go/bin:$PATH";

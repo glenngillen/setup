@@ -7,6 +7,8 @@ _: {
 
     # direnv's zsh hook comes from programs.direnv.enableZshIntegration.
     initContent = ''
+      # Avoid ZLE redraw corruption when pasting long commands in Ghostty.
+      ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
       source ~/.config/nix/home/configs/setup.sh
     '';
 
