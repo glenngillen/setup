@@ -23,6 +23,16 @@
     sessionVariables = {
       GOBIN = "$HOME/go/bin";
       PATH = "$HOME/go/bin:$PATH";
+
+      # `cd` is aliased to `z` (dev.nix), so every cd runs zoxide's `z`, which
+      # runs its doctor check: "is __zoxide_hook still in chpwd_functions?".
+      # Zed's and Claude Code's shells replay a captured snapshot of functions,
+      # aliases and exported vars rather than a full interactive startup, and a
+      # plain zsh array like chpwd_functions doesn't survive that — so `z` and
+      # `cd=z` come back but the hook doesn't, and the doctor cries wolf on
+      # every cd. Interactive shells register it fine, so this is a false
+      # positive in exactly the shells that can't ever satisfy the check.
+      _ZO_DOCTOR = "0";
     };
 
     # create .hushlogin file to suppress login messages

@@ -284,7 +284,11 @@ in
           enable = true;
           initContent = ''
             export PATH="/opt/homebrew/opt/zig@0.15/bin:/opt/homebrew/opt/libpq/bin:$PATH"
-            eval $(zoxide init zsh); source ~/.config/fzf-git.sh
+            # zoxide is already initialised by programs.zoxide.enableZshIntegration
+            # (shell.nix), near the top of .zshrc. Re-running it here was a no-op at
+            # best and, in shells where the bare `zoxide` isn't on PATH, printed
+            # "command not found: zoxide" on every startup.
+            source ~/.config/fzf-git.sh
           '';
           shellAliases = {
             reload = ". ~/.zshenv && . ~/.zshrc";
