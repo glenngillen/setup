@@ -68,7 +68,7 @@ This is non-blocking — builds will fall back to building from source — but r
 
 ## Managing Claude Code OAuth Token
 
-The Claude Code CLI runs as a separate `_claude` user and uses an OAuth token stored in an encrypted secrets file.
+The Claude Code CLI runs as the `_synapseagent` service user and uses an OAuth token stored in an encrypted secrets file.
 
 ### Generating a New OAuth Token
 
@@ -97,7 +97,9 @@ The Claude Code CLI runs as a separate `_claude` user and uses an OAuth token st
    nix-switch
    ```
 
-The encrypted secret will be decrypted at runtime to `/run/secrets/CLAUDE_CODE_OAUTH_TOKEN` and made available to the `_claude` user.
+The encrypted secret will be decrypted at runtime to `/run/secrets/CLAUDE_CODE_OAUTH_TOKEN`, owned by `_synapseagent:aicoders` with mode `0440`, so both the agent user and `gg` can read it.
+
+The `claude` wrapper also supports a second token profile, `infracost`, backed by `secrets/claude-oauth-infracost.env` — update it the same way.
 
 ### Troubleshooting
 
