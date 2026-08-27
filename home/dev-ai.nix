@@ -324,6 +324,11 @@ let
       exit 1
     fi
 
+    # Belt-and-braces: a reboot leaves the login keychain locked until the
+    # next darwin-rebuild; unlock it here so credential writes (e.g. MCP
+    # OAuth tokens) never raise a GUI keychain prompt mid-session.
+    /usr/bin/security unlock-keychain -p "" "$HOME/Library/Keychains/login.keychain-db" 2>/dev/null || true
+
     export NODE_OPTIONS="--import ${synapseAgentHome}/.claude/synapse-interceptor.mjs"
     exec /opt/homebrew/bin/claude "$@"
   '';
@@ -574,16 +579,27 @@ in
       echo "warning: some paths under ${synapseAgentHome} could not be re-owned" >&2
     fi
 
-    # Create a login keychain for the service user so macOS doesn't show
-    # "Keychain Not Found" popups. Left locked so nothing writes to it;
-    # the tool falls back to file-based credential storage.
+    # Login keychain for the service user, empty password, kept UNLOCKED with
+    # auto-lock disabled. The earlier "leave it locked, tools fall back to
+    # file storage" theory was wrong in practice: a locked DEFAULT keychain
+    # doesn't trigger file fallback (only a missing one does) — it makes
+    # `security` raise a GUI unlock prompt on the console user's screen
+    # (bit the Claude Code MCP OAuth flow, 2026-08-24; the default
+    # lock-on-sleep timeout=300s meant it was always locked again by the
+    # time a token write happened). Unlocked-with-empty-password is the
+    # strongest posture actually available to a headless uid: a passphrase
+    # would have to live in a file the same uid can read, item ACLs still
+    # gate cross-process reads, and at-rest protection is FileVault + file
+    # perms — same as this user's sops-managed credentials.
     SA_KC="${synapseAgentHome}/Library/Keychains/login.keychain-db"
     if [ ! -f "$SA_KC" ]; then
       mkdir -p "$(dirname "$SA_KC")"
       sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security create-keychain -p "" "$SA_KC"
       sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security default-keychain -s "$SA_KC"
-      sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security lock-keychain "$SA_KC"
     fi
+    # no -l/-u/-t flags => never auto-lock, no lock-on-sleep
+    sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security set-keychain-settings "$SA_KC"
+    sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security unlock-keychain -p "" "$SA_KC"
 
     # Inline RTK.md into codex AGENTS.md (codex resolves @includes relative
     # to the project dir, not ~/.codex, so the @RTK.md reference breaks)
