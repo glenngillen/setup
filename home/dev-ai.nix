@@ -557,7 +557,22 @@ in
   system.activationScripts.postActivation.text = ''
     echo "setting up synapse agent home..." >&2
     mkdir -p ${synapseAgentHome}/.claude ${synapseAgentHome}/.config ${synapseAgentHome}/.cache ${synapseAgentHome}/.local/share ${synapseAgentHome}/.local/bin ${synapseAgentHome}/.claude-infracost ${synapseAgentHome}/.codex ${synapseAgentHome}/.codex-infracost
-    chown -R ${synapseAgentUser}:aicoders ${synapseAgentHome}
+    # Re-own only what is actually mis-owned. A blanket `chown -R` over the
+    # whole home walked ~950k paths on every switch to change nothing in steady
+    # state, and it only had to hit one transient read error to take the entire
+    # rebuild down with it: readdir on macOS' sandbox containers under
+    # Library/Containers intermittently fails with EINTR ("Interrupted system
+    # call"), GNU chown treats that as fatal, and `set -e` at the top of
+    # nix-darwin's activation script does the rest. Those containers are only
+    # ever written by processes already running as the agent user, so prune
+    # them; and warn rather than abort if anything else refuses to be read.
+    if ! find ${synapseAgentHome} \
+      \( -path "${synapseAgentHome}/Library/Containers" \
+         -o -path "${synapseAgentHome}/Library/Group Containers" \) -prune -o \
+      \( ! -user ${synapseAgentUser} -o ! -group aicoders \) \
+      -exec chown -h ${synapseAgentUser}:aicoders {} + ; then
+      echo "warning: some paths under ${synapseAgentHome} could not be re-owned" >&2
+    fi
 
     # Create a login keychain for the service user so macOS doesn't show
     # "Keychain Not Found" popups. Left locked so nothing writes to it;
