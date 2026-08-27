@@ -522,6 +522,8 @@ in
     rustc
     rust-analyzer
     rustfmt
+    clippy
+    cargo-sweep # synapse loop_maintenance silently no-ops target-dir GC without it
     python312
     uv # Python package manager
     go
