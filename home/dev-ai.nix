@@ -47,6 +47,9 @@ let
   claudeSettingsInfracost = claudeSettings // {
     env = claudeSettings.env // {
       ANTHROPIC_BASE_URL = "https://tokenomics-gateway.internal.dev.infracost.io";
+      OTEL_EXPORTER_OTLP_METRICS_PROTOCOL = "http/protobuf";
+      OTEL_EXPORTER_OTLP_PROTOCOL = "http/protobuf";
+      CLAUDE_CODE_ENABLE_TELEMETRY = "1";
     };
   };
 
