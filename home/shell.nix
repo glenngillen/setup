@@ -60,6 +60,15 @@ _: {
       ruby.format = "[ $symbol]($style)";
       rust.format = "[ $symbol]($style)";
       swift.format = "[ $symbol]($style)";
+      # terraform never shelled out (its default format has no $version), but
+      # the default does carry "via " and $workspace, which is always "default"
+      # here. Symbol only, to match the modules above.
+      terraform = {
+        format = "[ $symbol]($style)";
+        # nf-md-terraform (U+F1062), the HashiCorp logo mark; the stock 💠 is a
+        # generic emoji diamond.
+        symbol = "󱁢 ";
+      };
       # $virtualenv comes from the environment, not a subprocess, so it stays.
       python.format = "[ $symbol(\\($virtualenv\\) )]($style)";
       cmd_duration = {
