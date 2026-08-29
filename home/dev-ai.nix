@@ -143,9 +143,6 @@ let
     export COLORTERM="''${COLORTERM:-xterm-ghostty}"
     export LANG="''${LANG:-}"
     export LC_ALL="''${LC_ALL:-}"
-    if [ -z "$GH_TOKEN_VALUE" ] && command -v gh >/dev/null 2>&1; then
-      GH_TOKEN_VALUE="$(gh auth token 2>/dev/null || true)"
-    fi
     export GH_TOKEN="$GH_TOKEN_VALUE"
     export CARGO_TARGET_DIR="$CARGO_TARGET_DIR_VALUE"
     if [ -n "$HTTPS_PROXY_VALUE" ]; then
@@ -191,10 +188,6 @@ let
     CWD_REAL="$(/bin/pwd -P 2>/dev/null || /bin/pwd)"
 
     GH_TOKEN_VALUE="''${GH_TOKEN:-}"
-    if [ -z "$GH_TOKEN_VALUE" ] && command -v gh >/dev/null 2>&1; then
-      GH_TOKEN_VALUE="$(gh auth token 2>/dev/null || true)"
-    fi
-
     TOKEN_PROFILE="default"
     PASSTHROUGH_ARGS=()
     while [ "$#" -gt 0 ]; do
@@ -258,9 +251,6 @@ let
     export COLORTERM="''${COLORTERM:-}"
     export LANG="''${LANG:-}"
     export LC_ALL="''${LC_ALL:-}"
-    if [ -z "$GH_TOKEN_VALUE" ] && command -v gh >/dev/null 2>&1; then
-      GH_TOKEN_VALUE="$(gh auth token 2>/dev/null || true)"
-    fi
     export GH_TOKEN="$GH_TOKEN_VALUE"
     export CARGO_TARGET_DIR="$CARGO_TARGET_DIR_VALUE"
     if [ -n "$HTTPS_PROXY_VALUE" ]; then
@@ -342,10 +332,6 @@ let
     CWD_REAL="$(/bin/pwd -P 2>/dev/null || /bin/pwd)"
 
     GH_TOKEN_VALUE="''${GH_TOKEN:-}"
-    if [ -z "$GH_TOKEN_VALUE" ] && command -v gh >/dev/null 2>&1; then
-      GH_TOKEN_VALUE="$(gh auth token 2>/dev/null || true)"
-    fi
-
     TOKEN_PROFILE="default"
     PASSTHROUGH_ARGS=()
     while [ "$#" -gt 0 ]; do
@@ -802,13 +788,14 @@ in
         init.defaultBranch = "main";
         user.name = gitName;
         user.email = gitEmail;
+        credential.interactive = false;
         "credential \"https://github.com\"".helper = [
           ""
-          "!/opt/homebrew/bin/gh auth git-credential"
+          "!f() { test \"$1\" = get && test -n \"$GH_TOKEN\" && printf 'username=x-access-token\\npassword=%s\\n' \"$GH_TOKEN\"; }; f"
         ];
         "credential \"https://gist.github.com\"".helper = [
           ""
-          "!/opt/homebrew/bin/gh auth git-credential"
+          "!f() { test \"$1\" = get && test -n \"$GH_TOKEN\" && printf 'username=x-access-token\\npassword=%s\\n' \"$GH_TOKEN\"; }; f"
         ];
       };
     };
