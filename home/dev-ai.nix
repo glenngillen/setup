@@ -626,9 +626,23 @@ in
       sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security create-keychain -p "" "$SA_KC"
       sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security default-keychain -s "$SA_KC"
     fi
+    # Unlock BEFORE changing settings, and never let either step be fatal.
+    # set-keychain-settings on a locked keychain has to unlock it first, and
+    # with no password on the command line that means raising the GUI unlock
+    # panel. Activation has no one to answer it, so it comes back
+    # errSecUserCanceled ("User canceled the operation") and `set -e` takes
+    # the entire switch down with it — which is exactly what happened on
+    # 2026-08-31: the system profile advanced to the new generation but
+    # /run/current-system stayed on the old one, so the rebuild looked
+    # applied while the old wrappers kept running. unlock-keychain is safe
+    # to go first because -p supplies the password rather than prompting.
+    if ! sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security unlock-keychain -p "" "$SA_KC" 2>/dev/null; then
+      echo "warning: could not unlock the agent login keychain ($SA_KC);" >&2
+      echo "         credential writes may raise a GUI prompt" >&2
     # no -l/-u/-t flags => never auto-lock, no lock-on-sleep
-    sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security set-keychain-settings "$SA_KC"
-    sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security unlock-keychain -p "" "$SA_KC"
+    elif ! sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security set-keychain-settings "$SA_KC" 2>/dev/null; then
+      echo "warning: could not disable auto-lock on the agent login keychain" >&2
+    fi
 
     # Inline RTK.md into codex AGENTS.md (codex resolves @includes relative
     # to the project dir, not ~/.codex, so the @RTK.md reference breaks)
