@@ -179,6 +179,16 @@ let
       exit 1
     fi
 
+    # Point git at gh's credential helper for github.com and gist.github.com.
+    # gh reads the token exported above, so this needs no login of its own.
+    # It rewrites ~/.gitconfig and is idempotent, so running it per launch is
+    # cheap. Non-fatal on failure: concurrent agent sessions can lose a race
+    # for git's config lock, and that shouldn't stop the session starting.
+    if [ -n "$GH_TOKEN_VALUE" ]; then
+      /opt/homebrew/bin/gh auth setup-git 2>/dev/null \
+        || echo "codex: gh auth setup-git failed; git may not authenticate to github.com" >&2
+    fi
+
     exec /opt/homebrew/bin/codex "$@"
   '';
 
@@ -187,7 +197,16 @@ let
 
     CWD_REAL="$(/bin/pwd -P 2>/dev/null || /bin/pwd)"
 
-    GH_TOKEN_VALUE="''${GH_TOKEN:-}"
+    # Resolve a GitHub token to hand to the agent. `gh auth token` echoes
+    # $GH_TOKEN when that is set and otherwise reads the keyring login, so this
+    # covers both an explicit override and a plain `gh auth login`. It has to be
+    # resolved here, as the calling user: the agent uid has no keyring login of
+    # its own, and sudo's env_reset means the variable can't just be inherited.
+    GH_TOKEN_VALUE="$(/opt/homebrew/bin/gh auth token 2>/dev/null || true)"
+    if [ -z "$GH_TOKEN_VALUE" ]; then
+      echo "codex: no GitHub token (is \`gh auth login\` done?); git and gh will be unauthenticated" >&2
+    fi
+
     TOKEN_PROFILE="default"
     PASSTHROUGH_ARGS=()
     while [ "$#" -gt 0 ]; do
@@ -322,6 +341,16 @@ let
     # OAuth tokens) never raise a GUI keychain prompt mid-session.
     /usr/bin/security unlock-keychain -p "" "$HOME/Library/Keychains/login.keychain-db" 2>/dev/null || true
 
+    # Point git at gh's credential helper for github.com and gist.github.com.
+    # gh reads the token exported above, so this needs no login of its own.
+    # It rewrites ~/.gitconfig and is idempotent, so running it per launch is
+    # cheap. Non-fatal on failure: concurrent agent sessions can lose a race
+    # for git's config lock, and that shouldn't stop the session starting.
+    if [ -n "$GH_TOKEN_VALUE" ]; then
+      /opt/homebrew/bin/gh auth setup-git 2>/dev/null \
+        || echo "claude: gh auth setup-git failed; git may not authenticate to github.com" >&2
+    fi
+
     export NODE_OPTIONS="--import ${synapseAgentHome}/.claude/synapse-interceptor.mjs"
     exec /opt/homebrew/bin/claude "$@"
   '';
@@ -331,7 +360,16 @@ let
 
     CWD_REAL="$(/bin/pwd -P 2>/dev/null || /bin/pwd)"
 
-    GH_TOKEN_VALUE="''${GH_TOKEN:-}"
+    # Resolve a GitHub token to hand to the agent. `gh auth token` echoes
+    # $GH_TOKEN when that is set and otherwise reads the keyring login, so this
+    # covers both an explicit override and a plain `gh auth login`. It has to be
+    # resolved here, as the calling user: the agent uid has no keyring login of
+    # its own, and sudo's env_reset means the variable can't just be inherited.
+    GH_TOKEN_VALUE="$(/opt/homebrew/bin/gh auth token 2>/dev/null || true)"
+    if [ -z "$GH_TOKEN_VALUE" ]; then
+      echo "claude: no GitHub token (is \`gh auth login\` done?); git and gh will be unauthenticated" >&2
+    fi
+
     TOKEN_PROFILE="default"
     PASSTHROUGH_ARGS=()
     while [ "$#" -gt 0 ]; do
