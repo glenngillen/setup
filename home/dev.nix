@@ -85,6 +85,7 @@ in
   environment.systemPackages = with pkgs; [
     nixd
     awscli2
+    sops
     opentofu
     ffmpeg
     whisper-cpp

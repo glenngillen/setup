@@ -1,6 +1,5 @@
 {
   pkgs,
-  lib,
   primaryUser,
   config,
   ...
@@ -68,20 +67,6 @@
       path = "${config.home.homeDirectory}/.aws/config";
     };
   };
-
-  # sops-nix declares the agent twice: once as `launchd.agents.sops-nix` (which
-  # home-manager's own setupLaunchAgents already installs and bootstraps, and
-  # which tolerates an unloaded agent) and again as a bare-string
-  # `home.activation.sops-nix` that boots the same label out and back in. The
-  # bare string means dagEntryAnywhere, so it carries no ordering against
-  # setupLaunchAgents; when it lands while the agent isn't loaded, launchctl
-  # writes "Boot-out failed: 3: No such process" straight to the console.
-  # Upstream wrote `&& true`, which doesn't swallow the status the way `|| true`
-  # would — harmless under errexit, but the noise looks like a failed rebuild.
-  home.activation.sops-nix = lib.mkForce ''
-    /bin/launchctl bootout gui/$(id -u ${config.home.username})/org.nix-community.home.sops-nix 2>/dev/null || true
-    /bin/launchctl bootstrap gui/$(id -u ${config.home.username}) ${config.home.homeDirectory}/Library/LaunchAgents/org.nix-community.home.sops-nix.plist
-  '';
 
   # # Ensure ~/.aws exists
   # home.file.".aws/.keep".text = "";
