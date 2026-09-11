@@ -26,9 +26,6 @@
     # sops (secrets management)
     sops-nix.url = "github:Mic92/sops-nix";
 
-    # rtk (token-efficient proxy for AI coding agents)
-    nix-rtk.url = "github:deepwatrcreatur/nix-rtk";
-    nix-rtk.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
@@ -42,15 +39,17 @@
       ...
     }@inputs:
     let
-      mkDarwinSystem = { hostname, primaryUser }: darwin.lib.darwinSystem {
-        system = "aarch64-darwin";
-        modules = [
-          ./darwin
-          ./hosts/${hostname}/configuration.nix
-          sops-nix.darwinModules.sops
-        ];
-        specialArgs = { inherit inputs self primaryUser; };
-      };
+      mkDarwinSystem =
+        { hostname, primaryUser }:
+        darwin.lib.darwinSystem {
+          system = "aarch64-darwin";
+          modules = [
+            ./darwin
+            ./hosts/${hostname}/configuration.nix
+            sops-nix.darwinModules.sops
+          ];
+          specialArgs = { inherit inputs self primaryUser; };
+        };
     in
     {
       # build darwin flake using:

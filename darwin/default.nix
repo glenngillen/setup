@@ -28,7 +28,6 @@
   };
 
   nixpkgs.config.allowUnfree = true;
-  nixpkgs.overlays = [ inputs.nix-rtk.overlays.default ];
 
   # homebrew installation manager
   nix-homebrew = {
@@ -53,7 +52,6 @@
     };
     sharedModules = [
       inputs.sops-nix.homeManagerModules.sops
-      inputs.nix-rtk.homeManagerModules.rtk-hooks
     ];
   };
 

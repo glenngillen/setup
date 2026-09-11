@@ -536,7 +536,6 @@ in
     codexScript
     claudeScript
     aicoderPerms
-    pkgs.llm-agents.rtk
 
     # Development languages and tools (available to all users including _synapseagent)
     nodejs_22 # or nodejs-slim if you don't need npm
@@ -642,13 +641,6 @@ in
     # no -l/-u/-t flags => never auto-lock, no lock-on-sleep
     elif ! sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security set-keychain-settings "$SA_KC" 2>/dev/null; then
       echo "warning: could not disable auto-lock on the agent login keychain" >&2
-    fi
-
-    # Inline RTK.md into codex AGENTS.md (codex resolves @includes relative
-    # to the project dir, not ~/.codex, so the @RTK.md reference breaks)
-    if [ -f ${synapseAgentHome}/.codex/RTK.md ] && [ -f ${synapseAgentHome}/.codex/AGENTS.md ]; then
-      cp ${synapseAgentHome}/.codex/RTK.md ${synapseAgentHome}/.codex/AGENTS.md
-      chown ${synapseAgentUser}:aicoders ${synapseAgentHome}/.codex/AGENTS.md
     fi
 
     # Write claude settings.json
@@ -808,14 +800,6 @@ in
           ${lib.escapeShellArg (builtins.toJSON codexSettings)}
       '';
 
-      programs.rtk-hooks = {
-        enable = true;
-        integrations = {
-          claude.enable = true;
-          codex.enable = true;
-        };
-      };
-
       programs.tmux = {
         enable = true;
       };
@@ -826,13 +810,6 @@ in
     home = {
       stateVersion = "25.05";
       homeDirectory = synapseAgentHome;
-    };
-    programs.rtk-hooks = {
-      enable = true;
-      integrations = {
-        claude.enable = true;
-        codex.enable = true;
-      };
     };
     programs.git = {
       enable = true;
