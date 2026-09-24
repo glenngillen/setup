@@ -43,10 +43,11 @@ let
     skipDangerousModePermissionPrompt = true;
   };
 
-  # Infracost profile: same settings but routed through tokenomics gateway
+  # Infracost profile: same settings but routed through LiteLLM gateway
   claudeSettingsInfracost = claudeSettings // {
     env = claudeSettings.env // {
-      ANTHROPIC_BASE_URL = "https://tokenomics-gateway.internal.dev.infracost.io";
+      ANTHROPIC_BASE_URL = "https://litellm.internal.dev.infracost.io";
+      ANTHROPIC_CUSTOM_HEADERS = "x-litellm-api-key: ${config.sops.placeholder.LITELLM_API_KEY_INFRACOST}";
       OTEL_EXPORTER_OTLP_METRICS_PROTOCOL = "http/protobuf";
       OTEL_EXPORTER_OTLP_PROTOCOL = "http/protobuf";
       CLAUDE_CODE_ENABLE_TELEMETRY = "1";
@@ -529,6 +530,26 @@ in
       group = "aicoders";
       mode = "0440";
     };
+    secrets."LITELLM_API_KEY_INFRACOST" = {
+      sopsFile = ../secrets/litellm-infracost.json;
+      format = "json";
+      owner = synapseAgentUser;
+      group = "aicoders";
+      mode = "0440";
+    };
+
+    # Substitute the gateway key after decryption, keeping it out of the Nix store.
+    templates."claude-infracost-settings.json".content = builtins.toJSON claudeSettingsInfracost;
+    templates."codex-infracost-config.toml".content = ''
+      model_provider = "litellm"
+
+      [model_providers.litellm]
+      name = "LiteLLM gateway"
+      base_url = "https://litellm.internal.dev.infracost.io/chatgpt"
+      wire_api = "responses"
+      requires_openai_auth = true
+      http_headers = { "x-litellm-api-key" = "${config.sops.placeholder.LITELLM_API_KEY_INFRACOST}" }
+    '';
   };
 
   environment.systemPackages = with pkgs; [
@@ -587,7 +608,8 @@ in
     shell = null;
   };
 
-  system.activationScripts.postActivation.text = ''
+  # sops-nix decrypts secrets at mkAfter (1500); copy its rendered templates afterwards.
+  system.activationScripts.postActivation.text = lib.mkOrder 1600 ''
     echo "setting up synapse agent home..." >&2
     mkdir -p ${synapseAgentHome}/.claude ${synapseAgentHome}/.config ${synapseAgentHome}/.cache ${synapseAgentHome}/.local/share ${synapseAgentHome}/.local/bin ${synapseAgentHome}/.claude-infracost ${synapseAgentHome}/.codex ${synapseAgentHome}/.codex-infracost
     # Re-own only what is actually mis-owned. A blanket `chown -R` over the
@@ -651,24 +673,16 @@ in
     chown ${synapseAgentUser}:aicoders ${synapseAgentHome}/.claude/settings.json
     chmod 600 ${synapseAgentHome}/.claude/settings.json
 
-    # Write infracost claude settings.json (with ANTHROPIC_BASE_URL)
+    # Copy rendered configs as writable files; both CLIs may update their settings.
     rm -f ${synapseAgentHome}/.claude-infracost/settings.json
-    cat > ${synapseAgentHome}/.claude-infracost/settings.json <<'SETTINGS_EOF'
-    ${builtins.toJSON claudeSettingsInfracost}
-    SETTINGS_EOF
-    chown ${synapseAgentUser}:aicoders ${synapseAgentHome}/.claude-infracost/settings.json
-    chmod 600 ${synapseAgentHome}/.claude-infracost/settings.json
+    install -m 600 -o ${synapseAgentUser} -g aicoders \
+      ${config.sops.templates."claude-infracost-settings.json".path} \
+      ${synapseAgentHome}/.claude-infracost/settings.json
 
-    # Write infracost codex config.toml (tokenomics gateway provider)
-    cat > ${synapseAgentHome}/.codex-infracost/config.toml <<'CODEX_TOML_EOF'
-    model_provider = "tokenomics"
-
-    [model_providers.tokenomics]
-    name = "Tokenomics gateway"
-    base_url = "https://tokenomics-gateway.internal.dev.infracost.io"
-    wire_api = "responses"
-    requires_openai_auth = true
-    CODEX_TOML_EOF
+    # Write infracost codex config.toml (LiteLLM gateway provider)
+    install -m 600 -o ${synapseAgentUser} -g aicoders \
+      ${config.sops.templates."codex-infracost-config.toml".path} \
+      ${synapseAgentHome}/.codex-infracost/config.toml
     ${mergeCodexSettings}/bin/merge-codex-settings \
       ${synapseAgentHome}/.codex-infracost/config.toml \
       ${lib.escapeShellArg (builtins.toJSON codexSettings)}

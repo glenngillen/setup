@@ -101,6 +101,25 @@ The encrypted secret will be decrypted at runtime to `/run/secrets/CLAUDE_CODE_O
 
 The `claude` wrapper also supports a second token profile, `infracost`, backed by `secrets/claude-oauth-infracost.env` — update it the same way.
 
+### Infracost LiteLLM Gateway
+
+`claude --as infracost` and `codex --as infracost` use the LiteLLM gateway and share
+the `LITELLM_API_KEY_INFRACOST` secret in `secrets/litellm-infracost.json`.
+Before applying the configuration, replace the encrypted `<YOUR KEY>` placeholder
+with your gateway key:
+
+```bash
+sops secrets/litellm-infracost.json
+setup sync
+```
+
+SOPS renders the key into Claude's `ANTHROPIC_CUSTOM_HEADERS` and Codex's
+`model_providers.litellm.http_headers` during activation. The resulting configs
+are installed with mode `0600` in `/var/synapse/agent-home/.claude-infracost/settings.json`
+and `/var/synapse/agent-home/.codex-infracost/config.toml`; the plaintext key stays
+out of the Nix store. The existing Claude OAuth token and Codex OpenAI login
+continue to provide authentication alongside the gateway header.
+
 ### Troubleshooting
 
 If you get "Invalid bearer token" errors:
