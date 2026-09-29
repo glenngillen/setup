@@ -1,4 +1,5 @@
 {
+  config,
   primaryUser,
   pkgs,
   inputs,
@@ -74,7 +75,8 @@ in
       let
         pkgsGo = import inputs.nixpkgs-go {
           system = prev.stdenv.hostPlatform.system;
-          config = prev.config;
+          # Let the pinned nixpkgs use its own defaults; they can differ in type.
+          config = config.nixpkgs.config;
         };
       in
       {
@@ -106,7 +108,6 @@ in
     onActivation = {
       autoUpdate = false;
       upgrade = true;
-      cleanup = "zap";
     };
 
     global.brewfile = true;

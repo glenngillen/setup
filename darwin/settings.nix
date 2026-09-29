@@ -135,7 +135,7 @@
       universalaccess = {
         closeViewScrollWheelToggle = true;
         closeViewZoomFollowsFocus = true;
-        reduceMotion = true;
+        reduceMotion = false;
         reduceTransparency = true;
 
       };

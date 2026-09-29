@@ -6,7 +6,12 @@
     onActivation = {
       autoUpdate = false;
       upgrade = true;
-      cleanup = "zap";
+      # nix-darwin's cleanup option still emits the deprecated --cleanup flag.
+      cleanup = "none";
+      extraFlags = [
+        "--force-cleanup"
+        "--zap"
+      ];
     };
 
     global.brewfile = true;

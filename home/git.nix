@@ -5,7 +5,14 @@
 
     lfs.enable = true;
 
-    ignores = [ "**/.DS_STORE" ];
+    ignores = [
+      "**/.DS_STORE"
+      ".worktrees"
+      ".vscode"
+      ".claude"
+      ".codex"
+
+    ];
 
     settings = {
       user.name = "Glenn Gillen";
