@@ -635,9 +635,13 @@ in
     # nix-darwin's activation script does the rest. Those containers are only
     # ever written by processes already running as the agent user, so prune
     # them; and warn rather than abort if anything else refuses to be read.
+    # Xcode also attaches its downloaded toolchains (e.g. MetalToolchain) as
+    # read-only disk images under DVTDownloads/*/mounts; chown can't touch
+    # those and produced hundreds of EROFS errors per switch, so prune them too.
     if ! find ${synapseAgentHome} \
       \( -path "${synapseAgentHome}/Library/Containers" \
-         -o -path "${synapseAgentHome}/Library/Group Containers" \) -prune -o \
+         -o -path "${synapseAgentHome}/Library/Group Containers" \
+         -o -path "${synapseAgentHome}/Library/Developer/DVTDownloads/*/mounts" \) -prune -o \
       \( ! -user ${synapseAgentUser} -o ! -group aicoders \) \
       -exec chown -h ${synapseAgentUser}:aicoders {} + ; then
       echo "warning: some paths under ${synapseAgentHome} could not be re-owned" >&2
