@@ -43,6 +43,18 @@ let
     skipDangerousModePermissionPrompt = true;
   };
 
+  # Read-only MCP policy for the infracost profile. Denies every write-capable
+  # tool on the close/linear/mixpanel/notion MCP servers by exact name (99 of
+  # 255 tools, classified 2026-10-02). Passed via --settings from the read-only
+  # nix store, so the agent can't edit it the way it can edit
+  # .claude-infracost/settings.json, and deny rules from a lower settings
+  # source can't remove it. Deny rules hold under --dangerously-skip-permissions
+  # and hide the tools from the model entirely. New vendor tools are NOT
+  # covered until added here.
+  claudeInfracostMcpPolicy = pkgs.writeText "claude-infracost-mcp-policy.json" (
+    builtins.readFile ./configs/claude-infracost-mcp-deny.json
+  );
+
   # Infracost profile: same settings but routed through LiteLLM gateway
   claudeSettingsInfracost = claudeSettings // {
     env = claudeSettings.env // {
@@ -246,6 +258,7 @@ let
     CWD="/tmp"
     GH_TOKEN_VALUE=""
     TOKEN_PROFILE="default"
+    POLICY_ARGS=()
     CARGO_TARGET_DIR_VALUE=""
     HTTPS_PROXY_VALUE=""
     IS_DEMO_VALUE=""
@@ -295,6 +308,7 @@ let
       infracost)
         OAUTH_SECRET="${config.sops.secrets."CLAUDE_CODE_OAUTH_TOKEN_INFRACOST".path}"
         export CLAUDE_CONFIG_DIR="${synapseAgentHome}/.claude-infracost"
+        POLICY_ARGS=(--settings ${claudeInfracostMcpPolicy})
         ;;
       *)
         echo "claude: unknown token profile: $TOKEN_PROFILE" >&2
@@ -353,7 +367,7 @@ let
     fi
 
     export NODE_OPTIONS="--import ${synapseAgentHome}/.claude/synapse-interceptor.mjs"
-    exec /opt/homebrew/bin/claude "$@"
+    exec /opt/homebrew/bin/claude ''${POLICY_ARGS[@]+"''${POLICY_ARGS[@]}"} "$@"
   '';
 
   claudeScript = pkgs.writeShellScriptBin "claude" ''
