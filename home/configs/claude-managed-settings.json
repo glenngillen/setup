@@ -2,6 +2,11 @@
   "permissions": {
     "deny": [
       "mcp__close__propose_voice_agent_update",
+      "mcp__infracost__create_fix",
+      "mcp__infracost__retry_action",
+      "mcp__infracost__set_org",
+      "mcp__infracost__update_finding_status",
+      "mcp__infracost__update_task_status",
       "mcp__linear__create_attachment",
       "mcp__linear__create_attachment_from_upload",
       "mcp__linear__create_initiative_label",
@@ -99,7 +104,12 @@
       "mcp__notion__notion-update-page",
       "mcp__notion__notion-update-view",
       "mcp__notion__notion-upload-skill",
-      "mcp__notion__notion-wait-session"
+      "mcp__notion__notion-wait-session",
+      "mcp__plugin_infracost_infracost__create_fix",
+      "mcp__plugin_infracost_infracost__retry_action",
+      "mcp__plugin_infracost_infracost__set_org",
+      "mcp__plugin_infracost_infracost__update_finding_status",
+      "mcp__plugin_infracost_infracost__update_task_status"
     ]
   }
 }

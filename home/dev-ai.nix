@@ -43,16 +43,28 @@ let
     skipDangerousModePermissionPrompt = true;
   };
 
-  # Read-only MCP policy for the infracost profile. Denies every write-capable
-  # tool on the close/linear/mixpanel/notion MCP servers by exact name (99 of
-  # 255 tools, classified 2026-10-02). Passed via --settings from the read-only
-  # nix store, so the agent can't edit it the way it can edit
-  # .claude-infracost/settings.json, and deny rules from a lower settings
-  # source can't remove it. Deny rules hold under --dangerously-skip-permissions
-  # and hide the tools from the model entirely. New vendor tools are NOT
-  # covered until added here.
-  claudeInfracostMcpPolicy = pkgs.writeText "claude-infracost-mcp-policy.json" (
-    builtins.readFile ./configs/claude-infracost-mcp-deny.json
+  # Machine-wide Claude Code policy, installed root-owned under
+  # /Library/Application Support/ClaudeCode by the activation script below.
+  # Every claude process reads these for every account, whatever its
+  # CLAUDE_CONFIG_DIR or flags, and nothing at a lower settings level can
+  # override them (verified 2026-10-02, Claude Code 2.1.286, including under
+  # the infracost org's server-managed settings).
+  #
+  # - managed-mcp.json takes exclusive control of MCP servers: claude refuses
+  #   --mcp-config/--strict-mcp-config, and user, project, and plugin servers
+  #   are ignored, so agents cannot add, rename, or swap servers.
+  # - managed-settings.json denies every write-capable tool on those servers
+  #   by exact name (classified tool by tool). Deny rules hold under
+  #   --dangerously-skip-permissions and hide the tools from the model.
+  #   New vendor tools are NOT covered until added here.
+  #
+  # This governs claude processes only. The MCP OAuth tokens still live in the
+  # agent's keychain, so a non-claude client could use them directly.
+  claudeManagedMcp = pkgs.writeText "claude-managed-mcp.json" (
+    builtins.readFile ./configs/claude-managed-mcp.json
+  );
+  claudeManagedSettings = pkgs.writeText "claude-managed-settings.json" (
+    builtins.readFile ./configs/claude-managed-settings.json
   );
 
   # Infracost profile: same settings but routed through LiteLLM gateway
@@ -258,7 +270,6 @@ let
     CWD="/tmp"
     GH_TOKEN_VALUE=""
     TOKEN_PROFILE="default"
-    POLICY_ARGS=()
     CARGO_TARGET_DIR_VALUE=""
     HTTPS_PROXY_VALUE=""
     IS_DEMO_VALUE=""
@@ -308,7 +319,6 @@ let
       infracost)
         OAUTH_SECRET="${config.sops.secrets."CLAUDE_CODE_OAUTH_TOKEN_INFRACOST".path}"
         export CLAUDE_CONFIG_DIR="${synapseAgentHome}/.claude-infracost"
-        POLICY_ARGS=(--settings ${claudeInfracostMcpPolicy})
         ;;
       *)
         echo "claude: unknown token profile: $TOKEN_PROFILE" >&2
@@ -367,7 +377,7 @@ let
     fi
 
     export NODE_OPTIONS="--import ${synapseAgentHome}/.claude/synapse-interceptor.mjs"
-    exec /opt/homebrew/bin/claude ''${POLICY_ARGS[@]+"''${POLICY_ARGS[@]}"} "$@"
+    exec /opt/homebrew/bin/claude "$@"
   '';
 
   claudeScript = pkgs.writeShellScriptBin "claude" ''
@@ -682,6 +692,12 @@ in
     elif ! sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security set-keychain-settings "$SA_KC" 2>/dev/null; then
       echo "warning: could not disable auto-lock on the agent login keychain" >&2
     fi
+
+    # Machine-wide Claude Code policy (see claudeManagedMcp above). Root-owned
+    # and read-only to everyone else, so agents cannot edit it.
+    install -d -m 755 -o root -g wheel "/Library/Application Support/ClaudeCode"
+    install -m 644 -o root -g wheel ${claudeManagedMcp} "/Library/Application Support/ClaudeCode/managed-mcp.json"
+    install -m 644 -o root -g wheel ${claudeManagedSettings} "/Library/Application Support/ClaudeCode/managed-settings.json"
 
     # Write claude settings.json
     rm -f ${synapseAgentHome}/.claude/settings.json
