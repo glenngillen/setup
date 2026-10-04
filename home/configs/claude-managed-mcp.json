@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "linear": {
+      "type": "http",
+      "url": "https://mcp.linear.app/mcp"
+    },
+    "notion": {
+      "type": "http",
+      "url": "https://mcp.notion.com/mcp"
+    },
+    "close": {
+      "type": "http",
+      "url": "https://mcp.close.com/mcp"
+    },
+    "mixpanel": {
+      "type": "http",
+      "url": "https://mcp.mixpanel.com/mcp"
+    },
+    "infracost": {
+      "type": "stdio",
+      "command": "/opt/homebrew/bin/infracost",
+      "args": [
+        "mcp"
+      ]
+    }
+  }
+}
