@@ -143,7 +143,9 @@ let
     set -euo pipefail
 
     CWD="/tmp"
-    GH_TOKEN_VALUE=""
+    # The token arrives via the environment (sudoers env_keep), never argv,
+    # so it does not show up in `ps` output for other users.
+    GH_TOKEN_VALUE="''${GH_TOKEN:-}"
     TOKEN_PROFILE="default"
     CARGO_TARGET_DIR_VALUE=""
     HTTPS_PROXY_VALUE=""
@@ -151,7 +153,6 @@ let
     while [ "$#" -gt 0 ]; do
       case "$1" in
         --cwd) CWD="$2"; shift 2 ;;
-        --gh-token) GH_TOKEN_VALUE="$2"; shift 2 ;;
         --token-profile) TOKEN_PROFILE="$2"; shift 2 ;;
         --cargo-target-dir) CARGO_TARGET_DIR_VALUE="$2"; shift 2 ;;
         --https-proxy) HTTPS_PROXY_VALUE="$2"; shift 2 ;;
@@ -231,6 +232,9 @@ let
     if [ -z "$GH_TOKEN_VALUE" ]; then
       echo "codex: no GitHub token (is \`gh auth login\` done?); git and gh will be unauthenticated" >&2
     fi
+    # Handed over in the environment rather than as an argument: argv is
+    # world-readable via `ps`. sudoers keeps GH_TOKEN across the uid switch.
+    export GH_TOKEN="$GH_TOKEN_VALUE"
 
     TOKEN_PROFILE="default"
     PASSTHROUGH_ARGS=()
@@ -250,7 +254,6 @@ let
     CODEX_ARGS=(
       ${lib.getExe codexAsUser}
       --cwd "$CWD_REAL"
-      --gh-token "$GH_TOKEN_VALUE"
       --token-profile "$TOKEN_PROFILE"
       --cargo-target-dir "''${CARGO_TARGET_DIR:-${synapseAgentHome}/.cache/synapse/target/$(basename "$CWD_REAL")}"
       "''${HTTPS_PROXY_ARGS[@]}"
@@ -268,7 +271,9 @@ let
     set -euo pipefail
 
     CWD="/tmp"
-    GH_TOKEN_VALUE=""
+    # The token arrives via the environment (sudoers env_keep), never argv,
+    # so it does not show up in `ps` output for other users.
+    GH_TOKEN_VALUE="''${GH_TOKEN:-}"
     TOKEN_PROFILE="default"
     CARGO_TARGET_DIR_VALUE=""
     HTTPS_PROXY_VALUE=""
@@ -277,7 +282,6 @@ let
     while [ "$#" -gt 0 ]; do
       case "$1" in
         --cwd) CWD="$2"; shift 2 ;;
-        --gh-token) GH_TOKEN_VALUE="$2"; shift 2 ;;
         --token-profile) TOKEN_PROFILE="$2"; shift 2 ;;
         --cargo-target-dir) CARGO_TARGET_DIR_VALUE="$2"; shift 2 ;;
         --https-proxy) HTTPS_PROXY_VALUE="$2"; shift 2 ;;
@@ -319,6 +323,9 @@ let
       infracost)
         OAUTH_SECRET="${config.sops.secrets."CLAUDE_CODE_OAUTH_TOKEN_INFRACOST".path}"
         export CLAUDE_CONFIG_DIR="${synapseAgentHome}/.claude-infracost"
+        export AWS_CONFIG_FILE="${config.sops.secrets."aws.config.infracost-agent.ini".path}"
+        export AWS_PROFILE=infracost-prod-readonly
+        export KUBECONFIG="${synapseAgentHome}/.kube/infracost"
         ;;
       *)
         echo "claude: unknown token profile: $TOKEN_PROFILE" >&2
@@ -394,6 +401,9 @@ let
     if [ -z "$GH_TOKEN_VALUE" ]; then
       echo "claude: no GitHub token (is \`gh auth login\` done?); git and gh will be unauthenticated" >&2
     fi
+    # Handed over in the environment rather than as an argument: argv is
+    # world-readable via `ps`. sudoers keeps GH_TOKEN across the uid switch.
+    export GH_TOKEN="$GH_TOKEN_VALUE"
 
     TOKEN_PROFILE="default"
     PASSTHROUGH_ARGS=()
@@ -415,7 +425,6 @@ let
     CLAUDE_ARGS=(
       ${lib.getExe claudeAsUser}
       --cwd "$CWD_REAL"
-      --gh-token "$GH_TOKEN_VALUE"
       --token-profile "$TOKEN_PROFILE"
       --cargo-target-dir "''${CARGO_TARGET_DIR:-${synapseAgentHome}/.cache/synapse/target/$(basename "$CWD_REAL")}"
       "''${HTTPS_PROXY_ARGS[@]}"
@@ -554,6 +563,16 @@ in
       group = "aicoders";
       mode = "0440";
     };
+    # The agent's AWS config: the infracost sso-session plus the single profile it
+    # needs (infracost-prod), never the user's full config. SSO tokens land in the
+    # agent's own ~/.aws/sso/cache, so the config itself can stay read-only.
+    secrets."aws.config.infracost-agent.ini" = {
+      sopsFile = ../secrets/aws.config.infracost-agent.ini;
+      format = "ini";
+      owner = synapseAgentUser;
+      group = "aicoders";
+      mode = "0440";
+    };
     secrets."LITELLM_API_KEY_INFRACOST" = {
       sopsFile = ../secrets/litellm-infracost.json;
       format = "json";
@@ -635,7 +654,7 @@ in
   # sops-nix decrypts secrets at mkAfter (1500); copy its rendered templates afterwards.
   system.activationScripts.postActivation.text = lib.mkOrder 1600 ''
     echo "setting up synapse agent home..." >&2
-    mkdir -p ${synapseAgentHome}/.claude ${synapseAgentHome}/.config ${synapseAgentHome}/.cache ${synapseAgentHome}/.local/share ${synapseAgentHome}/.local/bin ${synapseAgentHome}/.claude-infracost ${synapseAgentHome}/.codex ${synapseAgentHome}/.codex-infracost
+    mkdir -p ${synapseAgentHome}/.claude ${synapseAgentHome}/.config ${synapseAgentHome}/.cache ${synapseAgentHome}/.local/share ${synapseAgentHome}/.local/bin ${synapseAgentHome}/.claude-infracost ${synapseAgentHome}/.codex ${synapseAgentHome}/.codex-infracost ${synapseAgentHome}/.aws ${synapseAgentHome}/.kube
     # Re-own only what is actually mis-owned. A blanket `chown -R` over the
     # whole home walked ~950k paths on every switch to change nothing in steady
     # state, and it only had to hit one transient read error to take the entire
@@ -882,5 +901,6 @@ in
 
   security.sudo.extraConfig = ''
     ${primaryUser} ALL=(${synapseAgentUser}) NOPASSWD: ALL
+    Defaults>${synapseAgentUser} env_keep += "GH_TOKEN"
   '';
 }

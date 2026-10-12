@@ -1,5 +1,6 @@
 {
   pkgs,
+  lib,
   primaryUser,
   config,
   ...
@@ -61,16 +62,15 @@
 
   sops = {
     age.keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
-    secrets."aws.config.infracost.ini" = {
-      sopsFile = ../secrets/aws.config.infracost.ini;
+    secrets."aws.config.personal.ini" = {
+      sopsFile = ../secrets/aws.config.personal.ini;
       format = "ini";
+    };
+    # ~/.aws/config is assembled from fragments: `content` is a `lines` option, so
+    # other modules (e.g. infracost.nix) append their own decrypted config to it.
+    templates."aws-config" = {
       path = "${config.home.homeDirectory}/.aws/config";
+      content = lib.mkBefore config.sops.placeholder."aws.config.personal.ini";
     };
   };
-
-  # # Ensure ~/.aws exists
-  # home.file.".aws/.keep".text = "";
-
-  # # Put decrypted config at ~/.aws/config
-  # home.file.".aws/config".source = config.sops.secrets."aws-config-infracost".path;
 }

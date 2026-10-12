@@ -64,8 +64,14 @@
   };
 
   home-manager.users.${primaryUser} =
-    { pkgs, lib, ... }:
+    { pkgs, lib, config, ... }:
     {
+      sops.secrets."aws.config.infracost.ini" = {
+        sopsFile = ../secrets/aws.config.infracost.ini;
+        format = "ini";
+      };
+      sops.templates."aws-config".content = config.sops.placeholder."aws.config.infracost.ini";
+
       programs = {
         zsh = {
           initContent = ''
