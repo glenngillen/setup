@@ -523,8 +523,6 @@ let
     # Parents (so _synapseagent can reach the tree under /Users/gg)
     for path in "$@"; do
       ensure_parent_acls "$path"
-      abs="$(cd "$path" && pwd -P)"
-      git config --global --add safe.directory "$abs/*x"
     done
 
     # Fix group ownership, mode bits, and setgid.

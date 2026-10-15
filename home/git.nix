@@ -1,4 +1,4 @@
-{ primaryUser, ... }:
+{ config, primaryUser, ... }:
 {
   programs.git = {
     enable = true;
@@ -26,6 +26,14 @@
       core = {
         editor = "zed --wait";
       };
+      # Projects are owned by _synapseagent (group aicoders), so git's
+      # ownership check rejects them. A trailing /* trusts everything below.
+      # ~/Development is a symlink to /Volumes/Development; list both since
+      # the check can see either form depending on how the path was reached.
+      safe.directory = [
+        "${config.home.homeDirectory}/Development/*"
+        "/Volumes/Development/*"
+      ];
     };
   };
 
