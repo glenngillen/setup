@@ -368,10 +368,12 @@ let
       exit 1
     fi
 
-    # Belt-and-braces: a reboot leaves the login keychain locked until the
+    # Belt-and-braces: a reboot leaves the agent keychain locked until the
     # next darwin-rebuild; unlock it here so credential writes (e.g. MCP
-    # OAuth tokens) never raise a GUI keychain prompt mid-session.
-    /usr/bin/security unlock-keychain -p "" "$HOME/Library/Keychains/login.keychain-db" 2>/dev/null || true
+    # OAuth tokens) never raise a GUI keychain prompt mid-session. Warn on
+    # failure: silently swallowing it hid a broken keychain for weeks.
+    /usr/bin/security unlock-keychain -p "" "$HOME/Library/Keychains/agent.keychain-db" 2>/dev/null \
+      || echo "claude: warning: agent keychain won't unlock with the empty password; expect GUI keychain prompts" >&2
 
     # Point git at gh's credential helper for github.com and gist.github.com.
     # gh reads the token exported above, so this needs no login of its own.
@@ -688,12 +690,22 @@ in
     # would have to live in a file the same uid can read, item ACLs still
     # gate cross-process reads, and at-rest protection is FileVault + file
     # perms — same as this user's sops-managed credentials.
-    SA_KC="${synapseAgentHome}/Library/Keychains/login.keychain-db"
+    #
+    # NOT named login.keychain-db: macOS special-cases a keychain named
+    # "login" and won't unlock it with the empty password it was created
+    # with. It works until the first lock (reboot), then every credential
+    # read raises the GUI prompt. Reproduced 2026-10-14; any other name
+    # round-trips lock/unlock with "" fine. Stale login.keychain-db* files
+    # from before the rename are left alone (their items can't be decrypted).
+    SA_KC="${synapseAgentHome}/Library/Keychains/agent.keychain-db"
     if [ ! -f "$SA_KC" ]; then
       mkdir -p "$(dirname "$SA_KC")"
       sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security create-keychain -p "" "$SA_KC"
-      sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security default-keychain -s "$SA_KC"
     fi
+    # Every run, not just on create, so existing installs move off the old
+    # login keychain: Claude Code etc. write to the default keychain.
+    sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security list-keychains -d user -s "$SA_KC" || true
+    sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security default-keychain -s "$SA_KC" || true
     # Unlock BEFORE changing settings, and never let either step be fatal.
     # set-keychain-settings on a locked keychain has to unlock it first, and
     # with no password on the command line that means raising the GUI unlock
@@ -704,12 +716,15 @@ in
     # /run/current-system stayed on the old one, so the rebuild looked
     # applied while the old wrappers kept running. unlock-keychain is safe
     # to go first because -p supplies the password rather than prompting.
+    # It also verifies the password even when the keychain is already
+    # unlocked, so a failure here means the password is no longer "".
     if ! sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security unlock-keychain -p "" "$SA_KC" 2>/dev/null; then
-      echo "warning: could not unlock the agent login keychain ($SA_KC);" >&2
-      echo "         credential writes may raise a GUI prompt" >&2
+      echo "warning: the agent keychain ($SA_KC) does not accept the empty" >&2
+      echo "         password; credential reads WILL raise GUI prompts. Move it" >&2
+      echo "         aside and switch again to recreate it." >&2
     # no -l/-u/-t flags => never auto-lock, no lock-on-sleep
     elif ! sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security set-keychain-settings "$SA_KC" 2>/dev/null; then
-      echo "warning: could not disable auto-lock on the agent login keychain" >&2
+      echo "warning: could not disable auto-lock on the agent keychain" >&2
     fi
 
     # Machine-wide Claude Code policy (see claudeManagedMcp above). Root-owned
