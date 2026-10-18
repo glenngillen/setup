@@ -28,11 +28,12 @@
       };
       # Projects are owned by _synapseagent (group aicoders), so git's
       # ownership check rejects them. A trailing /* trusts everything below.
-      # ~/Development is a symlink to /Volumes/Development; list both since
-      # the check can see either form depending on how the path was reached.
-      safe.directory = [
-        "${config.home.homeDirectory}/Development/*"
-        "/Volumes/Development/*"
+      # ~/Development is a symlink to /Volumes/Development; git real_path()s
+      # both the entry and the repo, so this form also covers /Volumes paths.
+      safe.directory = map (d: "${config.home.homeDirectory}/Development/${d}/*") [
+        "infracost"
+        "personal"
+        "liquid"
       ];
     };
   };
