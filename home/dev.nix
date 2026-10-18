@@ -67,6 +67,25 @@ let
   # `bundle exec`. Bundler appends its own ruby/<abi>/ underneath, so this needs
   # no version scoping.
   rubyBundlePath = "$HOME/.gem/bundle";
+
+  # Copy-on-write git worktrees with code-anchored notes. Not in nixpkgs, so
+  # build the tagged release from source; bump `version` and `hash` to upgrade.
+  lane = pkgs.rustPlatform.buildRustPackage rec {
+    pname = "lane";
+    version = "0.2.0";
+    src = pkgs.fetchFromGitHub {
+      owner = "lukeed";
+      repo = "lane";
+      rev = "v${version}";
+      hash = "sha256-lQTYZ2vZZ7FWaL3aX5o/fB6WzFlEkorzkpQSJjfn85Y=";
+    };
+    cargoLock.lockFile = "${src}/Cargo.lock";
+    # The workspace also builds lane-tour, which we don't want installed.
+    cargoBuildFlags = [ "--package=lane" ];
+    # Its tests drive real git repos and reflink clones, which the build
+    # sandbox can't provide.
+    doCheck = false;
+  };
 in
 {
   nixpkgs.overlays = [
@@ -90,6 +109,9 @@ in
     sops
     opentofu
     ffmpeg
+    lane
+    ttyd
+    vhs
     whisper-cpp
   ];
 
@@ -294,6 +316,8 @@ in
             # best and, in shells where the bare `zoxide` isn't on PATH, printed
             # "command not found: zoxide" on every startup.
             source ~/.config/fzf-git.sh
+            # lets `lane new`/`lane enter` cd into the lane, and completes lane names
+            eval "$(${lane}/bin/lane shellenv)"
           '';
           shellAliases = {
             reload = ". ~/.zshenv && . ~/.zshrc";
