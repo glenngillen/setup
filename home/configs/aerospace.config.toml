@@ -253,7 +253,7 @@ exec-on-workspace-change = ['~/.config/aerospace/aerospace-workspace-change.sh']
 [[on-window-detected]]
     if.app-id = 'com.mitchellh.ghostty'
     check-further-callbacks = true
-    run = ['layout tiling', 'move-node-to-workspace T']
+    run = ['layout tiling']
 
 [[on-window-detected]]
     if.app-id = 'com.linear'
@@ -275,21 +275,79 @@ exec-on-workspace-change = ['~/.config/aerospace/aerospace-workspace-change.sh']
 [[on-window-detected]]
     if.app-id = 'com.superhuman.electron'
     check-further-callbacks = true
-    run = ['layout tiling', 'move-node-to-workspace M']
+    run = ['layout tiling', 'move-node-to-workspace M', 'layout --workspace M --root h_accordion']
+
+[[on-window-detected]]
+    if.app-id = 'Elastic.Close-io'
+    check-further-callbacks = true
+    run = ['layout tiling', 'move-node-to-workspace M', 'layout --workspace M --root h_accordion']
+
+[[on-window-detected]]
+    if.app-id = 'com.featherpost.mac'
+    check-further-callbacks = true
+    run = ['layout tiling', 'move-node-to-workspace M', 'layout --workspace M --root h_accordion']
 
 [[on-window-detected]]
     if.app-id = 'dev.zed.Zed'
     check-further-callbacks = true
-    run = ['layout floating', 'move-node-to-workspace E']
+    run = ['layout tiling', 'move-node-to-workspace E', 'layout --workspace E --root h_accordion']
 
 [[on-window-detected]]
     if.app-id = 'com.pixelmatorteam.pixelmator.x'
     check-further-callbacks = true
     run = ['layout floating', 'move-node-to-workspace P']
 
+[[on-window-detected]]
+    if.app-id = 'com.electron.wispr-flow'
+    check-further-callbacks = true
+    run = ['layout floating']
 
+[[on-window-detected]]
+    if.app-id = 'com.electron.dockerdesktop'
+    check-further-callbacks = true
+    run = ['layout floating', 'move-node-to-workspace D']
+
+[[on-window-detected]]
+    if.app-id = 'com.apple.Notes'
+    check-further-callbacks = true
+    run = ['layout tiling']
+
+[[on-window-detected]]
+    if.app-id = 'com.apple.TextEdit'
+    check-further-callbacks = true
+    run = ['layout tiling']
+
+[[on-window-detected]]
+    if.app-id = 'com.apple.finder'
+    check-further-callbacks = true
+    run = ['layout floating']
 
 [[on-window-detected]]
     if.app-id = 'com.tinyspeck.slackmacgap'
     check-further-callbacks = true
-    run = ['layout tiling', 'move-node-to-workspace 9']
+    run = ['layout tiling', 'move-node-to-workspace 9', 'layout --workspace 9 --root h_accordion']
+
+[[on-window-detected]]
+    if.app-id = 'com.hnc.Discord'
+    check-further-callbacks = true
+    run = ['layout tiling', 'move-node-to-workspace 9', 'layout --workspace 9 --root h_accordion']
+
+[[on-window-detected]]
+    if.app-id = 'com.anthropic.claudefordesktop'
+    check-further-callbacks = true
+    run = ['layout tiling', 'move-node-to-workspace C', 'layout --workspace C --root h_accordion']
+
+[[on-window-detected]]
+    if.app-id = 'com.openai.codex'
+    check-further-callbacks = true
+    run = ['layout tiling', 'move-node-to-workspace C', 'layout --workspace C --root h_accordion']
+
+[[on-window-detected]]
+    if.app-id = 'com.apple.Safari'
+    check-further-callbacks = true
+    run = ['layout tiling', 'move-node-to-workspace 2', 'layout --workspace 2 --root h_accordion']
+
+[[on-window-detected]]
+    if.app-id = 'com.google.Chrome'
+    check-further-callbacks = true
+    run = ['layout tiling', 'move-node-to-workspace 2', 'layout --workspace 2 --root h_accordion']
