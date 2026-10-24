@@ -1,80 +1,19 @@
 {
-  config,
-  pkgs,
-  inputs,
-  self,
   primaryUser,
   ...
 }:
+# Personal workstation: the shared core plus my apps, macOS preferences and
+# home-manager setup (which needs the sops age key to build).
 {
   imports = [
+    ./core.nix
     ./homebrew.nix
     ./settings.nix
-    inputs.home-manager.darwinModules.home-manager
-    inputs.nix-homebrew.darwinModules.nix-homebrew
   ];
 
-  # nix config
-  nix = {
-    settings = {
-      experimental-features = [
-        "nix-command"
-        "flakes"
-      ];
-      # disabled due to https://github.com/NixOS/nix/issues/7273
-      # auto-optimise-store = true;
-    };
-    enable = false; # using determinate installer
-  };
-
-  nixpkgs.config.allowUnfree = true;
-
-  # homebrew installation manager
-  nix-homebrew = {
-    user = primaryUser;
-    enable = true;
-    autoMigrate = true;
-    enableZshIntegration = false;
-  };
-
-  # home-manager config
-  home-manager = {
-    backupFileExtension = "backup";
-    useGlobalPkgs = true;
-    useUserPackages = true;
-    users.${primaryUser} = {
-      imports = [
-        ../home
-      ];
-    };
-    extraSpecialArgs = {
-      inherit inputs self primaryUser;
-    };
-    sharedModules = [
-      inputs.sops-nix.homeManagerModules.sops
+  home-manager.users.${primaryUser} = {
+    imports = [
+      ../home
     ];
   };
-
-  # macOS-specific settings
-  #
-  system.primaryUser = primaryUser;
-  users.users.${primaryUser} = {
-    home = "/Users/${primaryUser}";
-    shell = pkgs.zsh;
-  };
-
-  environment = {
-    systemPath = [
-      "/run/current-system/sw/bin"
-      "/etc/profiles/per-user/${primaryUser}/bin"
-      "/opt/homebrew/bin"
-    ];
-    pathsToLink = [ "/Applications" ];
-  };
-
-  system.activationScripts.activateSettings.text = ''
-    # Following line should allow us to avoid a logout/login cycle
-    /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
-  '';
-
 }

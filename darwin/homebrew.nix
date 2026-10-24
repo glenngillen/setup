@@ -1,21 +1,6 @@
 { primaryUser, ... }:
 {
   homebrew = {
-    enable = true;
-
-    onActivation = {
-      autoUpdate = false;
-      upgrade = true;
-      # nix-darwin's cleanup option still emits the deprecated --cleanup flag.
-      cleanup = "none";
-      extraFlags = [
-        "--force-cleanup"
-        "--zap"
-      ];
-    };
-
-    global.brewfile = true;
-
     # homebrew is best for GUI apps
     # nixpkgs is best for CLI tools
     casks = [

@@ -1,13 +1,6 @@
-{ self, ... }:
-{
-  # touch ID for sudo
-  security.pam.services.sudo_local.touchIdAuth = true;
-
+_: {
   # system defaults and preferences
   system = {
-    stateVersion = 6;
-    configurationRevision = self.rev or self.dirtyRev or null;
-
     startup.chime = false;
 
     defaults = {

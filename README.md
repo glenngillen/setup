@@ -44,6 +44,62 @@ Or use `darwin-rebuild` directly:
 darwin-rebuild switch --flake ".#<hostname>"
 ```
 
+## Eliott's Mac (`eliotts-mac`)
+
+A family laptop built on `darwin/core.nix` only: none of my workstation apps,
+preferences or sops secrets. There are two accounts: `glenn` (admin), which owns
+nix/Homebrew and is the only one that runs rebuilds, and `eliott` (Standard).
+
+What nix sets up (`hosts/eliotts-mac/`):
+
+- Cloudflare for Families DNS (`1.1.1.3`) on Wi-Fi and wired adapters, which
+  blocks malware and adult sites. A Standard account can't change it.
+- Application firewall with stealth mode on, no guest account, user-list login
+  window with a "please contact" message
+- Automatic macOS, security and App Store updates
+- Apps: Pages, Numbers, Keynote, GarageBand, iMovie, Scratch and Google Drive
+- Eliott's Dock, Finder and a few safety-minded preferences (file extensions
+  always shown, no personalised ads)
+
+### First-time setup
+
+These steps can't be done from nix, and the order matters:
+
+1. In Setup Assistant, create the **admin** account with the short name
+   `glenn`, and turn on FileVault when it offers.
+2. In System Settings → Users & Groups, add **Eliott** as a **Standard** user
+   with the short name `eliott`. Log in as him once so his home folder exists.
+   If he has a child Apple ID in Family Sharing, sign in with it on his account.
+3. Back on `glenn`, sign into the App Store. `mas` installs the App Store apps
+   with this Apple ID.
+4. Install Determinate Nix (see Prerequisites), clone this repo to
+   `~/.config/nix`, then run:
+   ```bash
+   sudo -H nix run nix-darwin -- switch --flake ".#eliotts-mac"
+   ```
+   After that, `setup sync` from the `glenn` account works like on the other hosts.
+5. Turn on Find My Mac (System Settings → Apple Account → iCloud).
+
+### Screen Time (from your iPhone, via Family Sharing)
+
+Screen Time does the per-app and per-hour controls. nix can't manage it, and
+because it's tied to his Apple ID it follows him across devices. In Settings →
+Screen Time → Eliott:
+
+- **Downtime** and **App Limits**: whatever schedule you agree on
+- **Content & Privacy Restrictions**: on
+  - Store: app age rating, and require approval for purchases (Ask to Buy)
+  - Web content: **Limit Adult Websites**. This applies only in Safari, so it
+    complements the DNS filter rather than replacing it.
+  - Account changes / passcode changes: **Don't Allow**
+- Set a **Screen Time passcode** he doesn't know.
+- Make sure **iCloud Private Relay** is off for his Apple ID. Safari sends DNS
+  lookups through Private Relay, which skips the Cloudflare filter.
+
+The DNS filter can still be bypassed by a VPN app, or by a browser using its own
+encrypted DNS. A Standard account plus Screen Time's app restrictions is what
+keeps those off the machine.
+
 ## FlakeHub Cache Authentication
 
 This configuration uses the [Determinate Nix](https://determinate.systems) installer, which includes the FlakeHub binary cache. If you see `HTTP error 401` warnings during rebuild:

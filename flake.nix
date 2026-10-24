@@ -40,11 +40,17 @@
     }@inputs:
     let
       mkDarwinSystem =
-        { hostname, primaryUser }:
+        {
+          hostname,
+          primaryUser,
+          # ./darwin is my personal workstation; ./darwin/core.nix is the bare
+          # minimum for machines that aren't mine (no apps, prefs or secrets).
+          base ? ./darwin,
+        }:
         darwin.lib.darwinSystem {
           system = "aarch64-darwin";
           modules = [
-            ./darwin
+            base
             ./hosts/${hostname}/configuration.nix
             sops-nix.darwinModules.sops
           ];
@@ -62,6 +68,13 @@
       darwinConfigurations."scruffy" = mkDarwinSystem {
         hostname = "scruffy";
         primaryUser = "glenn";
+      };
+      # Eliott's laptop. primaryUser is my admin account on it, which owns
+      # nix/Homebrew and runs rebuilds; Eliott's own account is a standard one.
+      darwinConfigurations."eliotts-mac" = mkDarwinSystem {
+        hostname = "eliotts-mac";
+        primaryUser = "glenn";
+        base = ./darwin/core.nix;
       };
       packages.aarch64-darwin.default = { };
     };
