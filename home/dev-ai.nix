@@ -651,10 +651,15 @@ in
     shell = null;
   };
 
-  # sops-nix decrypts secrets at mkAfter (1500); copy its rendered templates afterwards.
-  system.activationScripts.postActivation.text = lib.mkOrder 1600 ''
+  system.activationScripts.postActivation.text = lib.mkMerge [
+  # Runs before home-manager's per-user activation (default order 1000), which
+  # runs as the agent user and has to be able to write anywhere it links into
+  # the home — e.g. Library/Fonts, which home-manager creates for every darwin
+  # user. A root-owned Library/ left by an earlier switch broke that, and since
+  # the failure aborts the switch, a re-own placed after it never got to run.
+  (lib.mkOrder 900 ''
     echo "setting up synapse agent home..." >&2
-    mkdir -p ${synapseAgentHome}/.claude ${synapseAgentHome}/.config ${synapseAgentHome}/.cache ${synapseAgentHome}/.local/share ${synapseAgentHome}/.local/bin ${synapseAgentHome}/.claude-infracost ${synapseAgentHome}/.codex ${synapseAgentHome}/.codex-infracost ${synapseAgentHome}/.aws ${synapseAgentHome}/.kube
+    mkdir -p ${synapseAgentHome}/Library ${synapseAgentHome}/.claude ${synapseAgentHome}/.config ${synapseAgentHome}/.cache ${synapseAgentHome}/.local/share ${synapseAgentHome}/.local/bin ${synapseAgentHome}/.claude-infracost ${synapseAgentHome}/.codex ${synapseAgentHome}/.codex-infracost ${synapseAgentHome}/.aws ${synapseAgentHome}/.kube
     # Re-own only what is actually mis-owned. A blanket `chown -R` over the
     # whole home walked ~950k paths on every switch to change nothing in steady
     # state, and it only had to hit one transient read error to take the entire
@@ -675,6 +680,12 @@ in
       -exec chown -h ${synapseAgentUser}:aicoders {} + ; then
       echo "warning: some paths under ${synapseAgentHome} could not be re-owned" >&2
     fi
+  '')
+
+  # sops-nix decrypts secrets at mkAfter (1500); copy its rendered templates afterwards.
+  # Anything created here as root must be owned explicitly: the re-own above has
+  # already run.
+  (lib.mkOrder 1600 ''
 
     # Login keychain for the service user, empty password, kept UNLOCKED with
     # auto-lock disabled. The earlier "leave it locked, tools fall back to
@@ -697,7 +708,7 @@ in
     # from before the rename are left alone (their items can't be decrypted).
     SA_KC="${synapseAgentHome}/Library/Keychains/agent.keychain-db"
     if [ ! -f "$SA_KC" ]; then
-      mkdir -p "$(dirname "$SA_KC")"
+      install -d -o ${synapseAgentUser} -g aicoders "$(dirname "$SA_KC")"
       sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security create-keychain -p "" "$SA_KC"
     fi
     # Every run, not just on create, so existing installs move off the old
@@ -836,7 +847,8 @@ in
         chmod +a "group:aicoders allow read,execute,search,readattr,readextattr,readsecurity" "$d" 2>/dev/null || true
       fi
     done
-  '';
+  '')
+  ];
 
   homebrew = {
     enable = true;
