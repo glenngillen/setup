@@ -168,6 +168,9 @@ in
         ];
 
         shellAliases = {
+          # Use the Homebrew macOS CLI, including in shells with an old
+          # Home Manager `zed=zeditor` alias still loaded.
+          zed = "/opt/homebrew/bin/zed";
           ls = "eza -Ahl --git";
           cat = "bat";
           grep = "rg";

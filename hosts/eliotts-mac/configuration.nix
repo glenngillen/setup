@@ -12,6 +12,7 @@
 {
   imports = [
     ./eliott.nix
+    ./tailscale.nix
   ];
 
   networking.hostName = "eliotts-mac";

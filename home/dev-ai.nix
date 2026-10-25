@@ -335,9 +335,17 @@ let
     esac
 
     if [ -r "$OAUTH_SECRET" ]; then
-      export CLAUDE_CODE_OAUTH_TOKEN="$(grep '^CLAUDE_CODE_OAUTH_TOKEN=' "$OAUTH_SECRET" | cut -d= -f2-)"
+      # sops-nix extracts the selected dotenv value into this file; it is
+      # already the token, not a KEY=value dotenv document.
+      CLAUDE_CODE_OAUTH_TOKEN="$(cat "$OAUTH_SECRET")"
+      if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+        echo "claude: OAuth secret for profile '$TOKEN_PROFILE' is empty" >&2
+        exit 1
+      fi
+      export CLAUDE_CODE_OAUTH_TOKEN
     else
       echo "claude: cannot read OAuth secret for profile '$TOKEN_PROFILE'" >&2
+      echo "       expected: $OAUTH_SECRET; check the sops-install-secrets service and run setup sync" >&2
       exit 1
     fi
 

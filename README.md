@@ -58,6 +58,8 @@ What nix sets up (`hosts/eliotts-mac/`):
   window with a "please contact" message
 - Automatic macOS, security and App Store updates
 - Apps: Pages, Numbers, Keynote, GarageBand, iMovie, Scratch and Google Drive
+- Tailscale, plus a configuration profile (`~/Profiles/eliotts-mac-tailscale.mobileconfig`
+  in the admin account) that keeps it always on and limits it to our tailnet
 - Eliott's Dock, Finder and a few safety-minded preferences (file extensions
   always shown, no personalised ads)
 
@@ -78,7 +80,14 @@ These steps can't be done from nix, and the order matters:
    sudo -H nix run nix-darwin -- switch --flake ".#eliotts-mac"
    ```
    After that, `setup sync` from the `glenn` account works like on the other hosts.
-5. Turn on Find My Mac (System Settings → Apple Account → iCloud).
+5. Install the Tailscale profile: run `open ~/Profiles/eliotts-mac-tailscale.mobileconfig`,
+   then approve it in System Settings → General → Device Management. This
+   applies to every account, and a Standard user can't remove it.
+6. Log in as `eliott`, open Tailscale and sign it into the tailnet. Then, in
+   the Tailscale admin console, **disable key expiry** for this machine.
+   Otherwise it gets logged out after 180 days, and always-on can't reconnect
+   without a login.
+7. Turn on Find My Mac (System Settings → Apple Account → iCloud).
 
 ### Screen Time (from your iPhone, via Family Sharing)
 
@@ -88,7 +97,9 @@ Screen Time → Eliott:
 
 - **Downtime** and **App Limits**: whatever schedule you agree on
 - **Content & Privacy Restrictions**: on
-  - Store: app age rating, and require approval for purchases (Ask to Buy)
+  - Store: app age rating, and **Ask to Buy** (in Family Sharing). Ask to Buy
+    covers free apps too, so every App Store install, including VPN apps,
+    needs your approval.
   - Web content: **Limit Adult Websites**. This applies only in Safari, so it
     complements the DNS filter rather than replacing it.
   - Account changes / passcode changes: **Don't Allow**
@@ -96,9 +107,22 @@ Screen Time → Eliott:
 - Make sure **iCloud Private Relay** is off for his Apple ID. Safari sends DNS
   lookups through Private Relay, which skips the Cloudflare filter.
 
-The DNS filter can still be bypassed by a VPN app, or by a browser using its own
-encrypted DNS. A Standard account plus Screen Time's app restrictions is what
-keeps those off the machine.
+### Other VPNs
+
+There's no way to block VPN apps outright without an MDM server. These layers
+cover most of the gap:
+
+- **Ask to Buy:** App Store VPN apps need your approval to install.
+- **Standard account:** most VPNs from outside the App Store need a system
+  extension, and approving one needs an admin password.
+
+What can still get through is a VPN downloaded from a website that doesn't need
+a system extension, or a browser using its own encrypted DNS. Both would also
+skip the DNS filter. Closing that gap would need app allowlisting (Santa) or an
+MDM server.
+
+It's worth checking on the laptop whether a Standard user can approve an App
+Store VPN's "Add VPN Configurations" prompt.
 
 ## FlakeHub Cache Authentication
 
