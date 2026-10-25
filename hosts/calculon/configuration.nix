@@ -11,11 +11,29 @@
     ../../home/ai.nix
     ../../home/personal.nix
     ../../home/dev-ai.nix
+    ./remote-access.nix
   ];
 
   networking.hostName = "calculon";
   networking.localHostName = "calculon";
   networking.computerName = "calculon";
+
+  # Network restrictions are in remote-access.nix.
+  services.openssh = {
+    enable = true;
+    extraConfig = ''
+      AllowUsers ${primaryUser}
+      PermitRootLogin no
+      PubkeyAuthentication yes
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      AuthenticationMethods publickey
+    '';
+  };
+
+  users.users.${primaryUser}.openssh.authorizedKeys.keyFiles = [
+    ./authorized-key.pub
+  ];
 
   power.sleep.computer = 60;
   power.sleep.display = 30;
