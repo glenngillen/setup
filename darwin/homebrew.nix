@@ -3,6 +3,17 @@
   homebrew = {
     # homebrew is best for GUI apps
     # nixpkgs is best for CLI tools
+
+    # Homebrew 6 refuses to load casks from third-party taps until they're
+    # trusted, and `brew cleanup` (run during activation) loads every installed
+    # cask — so without this the rebuild fails at cleanup even after the cask
+    # installs. `brew bundle` applies `trusted:` before loading, keeping
+    # activation self-contained (no out-of-band `brew trust` needed on a fresh
+    # machine). Lives in extraConfig because nix-darwin's tap submodule has no
+    # `trusted` option yet. See the same pattern in home/infracost.nix.
+    extraConfig = ''
+      tap "nikitabobko/tap", trusted: { casks: "aerospace" }
+    '';
     casks = [
 
       # OS enhancements
@@ -10,6 +21,7 @@
       "jordanbaird-ice@beta"
       "raycast"
       "betterdisplay"
+      "aerospace" # tiling window manager (config deployed below)
 
       # messaging
       "discord"
