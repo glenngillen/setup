@@ -99,7 +99,7 @@
           lib.makeBinPath (
             with pkgs;
             [
-              awscli
+              awscli2
               git
               kubectl
             ]
