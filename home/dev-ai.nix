@@ -335,9 +335,10 @@ let
     esac
 
     if [ -r "$OAUTH_SECRET" ]; then
-      # sops-nix extracts the selected dotenv value into this file; it is
-      # already the token, not a KEY=value dotenv document.
-      CLAUDE_CODE_OAUTH_TOKEN="$(cat "$OAUTH_SECRET")"
+      # These dotenv secrets set no `key`, so sops-nix writes the whole
+      # decrypted document (a KEY=value line), not the bare token. Strip
+      # the variable name from the first line.
+      CLAUDE_CODE_OAUTH_TOKEN="$(sed -n '1s/^[A-Z_]*=//p' "$OAUTH_SECRET")"
       if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
         echo "claude: OAuth secret for profile '$TOKEN_PROFILE' is empty" >&2
         exit 1
@@ -660,202 +661,202 @@ in
   };
 
   system.activationScripts.postActivation.text = lib.mkMerge [
-  # Runs before home-manager's per-user activation (default order 1000), which
-  # runs as the agent user and has to be able to write anywhere it links into
-  # the home — e.g. Library/Fonts, which home-manager creates for every darwin
-  # user. A root-owned Library/ left by an earlier switch broke that, and since
-  # the failure aborts the switch, a re-own placed after it never got to run.
-  (lib.mkOrder 900 ''
-    echo "setting up synapse agent home..." >&2
-    mkdir -p ${synapseAgentHome}/Library ${synapseAgentHome}/.claude ${synapseAgentHome}/.config ${synapseAgentHome}/.cache ${synapseAgentHome}/.local/share ${synapseAgentHome}/.local/bin ${synapseAgentHome}/.claude-infracost ${synapseAgentHome}/.codex ${synapseAgentHome}/.codex-infracost ${synapseAgentHome}/.aws ${synapseAgentHome}/.kube
-    # Re-own only what is actually mis-owned. A blanket `chown -R` over the
-    # whole home walked ~950k paths on every switch to change nothing in steady
-    # state, and it only had to hit one transient read error to take the entire
-    # rebuild down with it: readdir on macOS' sandbox containers under
-    # Library/Containers intermittently fails with EINTR ("Interrupted system
-    # call"), GNU chown treats that as fatal, and `set -e` at the top of
-    # nix-darwin's activation script does the rest. Those containers are only
-    # ever written by processes already running as the agent user, so prune
-    # them; and warn rather than abort if anything else refuses to be read.
-    # Xcode also attaches its downloaded toolchains (e.g. MetalToolchain) as
-    # read-only disk images under DVTDownloads/*/mounts; chown can't touch
-    # those and produced hundreds of EROFS errors per switch, so prune them too.
-    if ! find ${synapseAgentHome} \
-      \( -path "${synapseAgentHome}/Library/Containers" \
-         -o -path "${synapseAgentHome}/Library/Group Containers" \
-         -o -path "${synapseAgentHome}/Library/Developer/DVTDownloads/*/mounts" \) -prune -o \
-      \( ! -user ${synapseAgentUser} -o ! -group aicoders \) \
-      -exec chown -h ${synapseAgentUser}:aicoders {} + ; then
-      echo "warning: some paths under ${synapseAgentHome} could not be re-owned" >&2
-    fi
-  '')
-
-  # sops-nix decrypts secrets at mkAfter (1500); copy its rendered templates afterwards.
-  # Anything created here as root must be owned explicitly: the re-own above has
-  # already run.
-  (lib.mkOrder 1600 ''
-
-    # Login keychain for the service user, empty password, kept UNLOCKED with
-    # auto-lock disabled. The earlier "leave it locked, tools fall back to
-    # file storage" theory was wrong in practice: a locked DEFAULT keychain
-    # doesn't trigger file fallback (only a missing one does) — it makes
-    # `security` raise a GUI unlock prompt on the console user's screen
-    # (bit the Claude Code MCP OAuth flow, 2026-08-24; the default
-    # lock-on-sleep timeout=300s meant it was always locked again by the
-    # time a token write happened). Unlocked-with-empty-password is the
-    # strongest posture actually available to a headless uid: a passphrase
-    # would have to live in a file the same uid can read, item ACLs still
-    # gate cross-process reads, and at-rest protection is FileVault + file
-    # perms — same as this user's sops-managed credentials.
-    #
-    # NOT named login.keychain-db: macOS special-cases a keychain named
-    # "login" and won't unlock it with the empty password it was created
-    # with. It works until the first lock (reboot), then every credential
-    # read raises the GUI prompt. Reproduced 2026-10-14; any other name
-    # round-trips lock/unlock with "" fine. Stale login.keychain-db* files
-    # from before the rename are left alone (their items can't be decrypted).
-    SA_KC="${synapseAgentHome}/Library/Keychains/agent.keychain-db"
-    if [ ! -f "$SA_KC" ]; then
-      install -d -o ${synapseAgentUser} -g aicoders "$(dirname "$SA_KC")"
-      sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security create-keychain -p "" "$SA_KC"
-    fi
-    # Every run, not just on create, so existing installs move off the old
-    # login keychain: Claude Code etc. write to the default keychain.
-    sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security list-keychains -d user -s "$SA_KC" || true
-    sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security default-keychain -s "$SA_KC" || true
-    # Unlock BEFORE changing settings, and never let either step be fatal.
-    # set-keychain-settings on a locked keychain has to unlock it first, and
-    # with no password on the command line that means raising the GUI unlock
-    # panel. Activation has no one to answer it, so it comes back
-    # errSecUserCanceled ("User canceled the operation") and `set -e` takes
-    # the entire switch down with it — which is exactly what happened on
-    # 2026-08-31: the system profile advanced to the new generation but
-    # /run/current-system stayed on the old one, so the rebuild looked
-    # applied while the old wrappers kept running. unlock-keychain is safe
-    # to go first because -p supplies the password rather than prompting.
-    # It also verifies the password even when the keychain is already
-    # unlocked, so a failure here means the password is no longer "".
-    if ! sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security unlock-keychain -p "" "$SA_KC" 2>/dev/null; then
-      echo "warning: the agent keychain ($SA_KC) does not accept the empty" >&2
-      echo "         password; credential reads WILL raise GUI prompts. Move it" >&2
-      echo "         aside and switch again to recreate it." >&2
-    # no -l/-u/-t flags => never auto-lock, no lock-on-sleep
-    elif ! sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security set-keychain-settings "$SA_KC" 2>/dev/null; then
-      echo "warning: could not disable auto-lock on the agent keychain" >&2
-    fi
-
-    # Machine-wide Claude Code policy (see claudeManagedMcp above). Root-owned
-    # and read-only to everyone else, so agents cannot edit it.
-    install -d -m 755 -o root -g wheel "/Library/Application Support/ClaudeCode"
-    install -m 644 -o root -g wheel ${claudeManagedMcp} "/Library/Application Support/ClaudeCode/managed-mcp.json"
-    install -m 644 -o root -g wheel ${claudeManagedSettings} "/Library/Application Support/ClaudeCode/managed-settings.json"
-
-    # Write claude settings.json
-    rm -f ${synapseAgentHome}/.claude/settings.json
-    cat > ${synapseAgentHome}/.claude/settings.json <<'SETTINGS_EOF'
-    ${builtins.toJSON claudeSettings}
-    SETTINGS_EOF
-    chown ${synapseAgentUser}:aicoders ${synapseAgentHome}/.claude/settings.json
-    chmod 600 ${synapseAgentHome}/.claude/settings.json
-
-    # Copy rendered configs as writable files; both CLIs may update their settings.
-    rm -f ${synapseAgentHome}/.claude-infracost/settings.json
-    install -m 600 -o ${synapseAgentUser} -g aicoders \
-      ${config.sops.templates."claude-infracost-settings.json".path} \
-      ${synapseAgentHome}/.claude-infracost/settings.json
-
-    # Write infracost codex config.toml (LiteLLM gateway provider)
-    install -m 600 -o ${synapseAgentUser} -g aicoders \
-      ${config.sops.templates."codex-infracost-config.toml".path} \
-      ${synapseAgentHome}/.codex-infracost/config.toml
-    ${mergeCodexSettings}/bin/merge-codex-settings \
-      ${synapseAgentHome}/.codex-infracost/config.toml \
-      ${lib.escapeShellArg (builtins.toJSON codexSettings)}
-    chown ${synapseAgentUser}:aicoders ${synapseAgentHome}/.codex-infracost/config.toml
-    chmod 600 ${synapseAgentHome}/.codex-infracost/config.toml
-
-    # Merge preferred settings into the agent's default codex profile
-    ${mergeCodexSettings}/bin/merge-codex-settings \
-      ${synapseAgentHome}/.codex/config.toml \
-      ${lib.escapeShellArg (builtins.toJSON codexSettings)}
-    chown ${synapseAgentUser}:aicoders ${synapseAgentHome}/.codex/config.toml
-    chmod 600 ${synapseAgentHome}/.codex/config.toml
-
-    # Merge mcpServers into ~/.claude.json
-    CLAUDE_JSON="${synapseAgentHome}/.claude.json"
-    if [ ! -f "$CLAUDE_JSON" ]; then
-      echo '{}' > "$CLAUDE_JSON"
-      chown ${synapseAgentUser}:aicoders "$CLAUDE_JSON"
-      chmod 600 "$CLAUDE_JSON"
-    fi
-    ${pkgs.python3}/bin/python3 -c "
-    import json, sys
-    path = sys.argv[1]
-    with open(path) as f:
-        d = json.load(f)
-    d['mcpServers'] = json.loads(sys.argv[2])
-    with open(path, 'w') as f:
-        json.dump(d, f, indent=2)
-    " "$CLAUDE_JSON" '${builtins.toJSON mcpConfig.mcpServers}'
-
-    # Install rustup components as _synapseagent
-    if command -v rustup >/dev/null 2>&1; then
-      sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} PATH="/run/current-system/sw/bin:${synapseAgentHome}/.cargo/bin:/opt/homebrew/bin:$PATH" rustup component add rust-analyzer rustfmt 2>/dev/null || true
-    fi
-
-    # Install and enable plugins as _synapseagent
-    echo "installing claude plugins for ${synapseAgentUser}..." >&2
-    if [ -x /opt/homebrew/bin/claude ]; then
-      SA_CMD="sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} PATH=/run/current-system/sw/bin:${synapseAgentHome}/.cargo/bin:/opt/homebrew/bin:''$PATH"
-
-      # Marketplaces
-      $SA_CMD /opt/homebrew/bin/claude plugin marketplace add anthropics/claude-plugins-official 2>/dev/null || true
-      $SA_CMD /opt/homebrew/bin/claude plugin marketplace add infracost/agent-skills 2>/dev/null || true
-      $SA_CMD /opt/homebrew/bin/claude plugin marketplace add /Users/${primaryUser}/Development/personal/synapse/.claude-marketplace 2>/dev/null || true
-
-      # Infracost plugin
-      $SA_CMD /opt/homebrew/bin/claude plugin install infracost@infracost 2>/dev/null || true
-
-      # Official LSP plugins
-      for plugin in \
-        rust-analyzer-lsp \
-        typescript-lsp \
-        swift-lsp \
-        pyright-lsp \
-        gopls-lsp \
-        ruby-lsp \
-      ; do
-        $SA_CMD /opt/homebrew/bin/claude plugin install "$plugin@claude-plugins-official" 2>/dev/null || true
-        $SA_CMD /opt/homebrew/bin/claude plugin enable "$plugin@claude-plugins-official" 2>/dev/null || true
-      done
-
-      # Synapse marketplace plugins
-      for plugin in \
-        spec-language-server \
-        bash-language-server \
-        svelte-lsp \
-        terraform-ls \
-        astro-lsp \
-      ; do
-        $SA_CMD /opt/homebrew/bin/claude plugin install "$plugin@synapse" 2>/dev/null || true
-        $SA_CMD /opt/homebrew/bin/claude plugin enable "$plugin@synapse" 2>/dev/null || true
-      done
-    fi
-
-    echo "setting up ai permissions..." >&2
-    # Grant aicoders group basic access to traverse user home and system directories
-    chmod +a "group:aicoders allow read,execute,search" "$TMPDIR" 2>/dev/null || true
-    chmod +a "group:aicoders allow read,execute,search,file_inherit,directory_inherit" "$\{TMPDIR\}TemporaryItems" 2>/dev/null || true
-    chmod +a "group:aicoders allow search" /var/folders/ 2>/dev/null || true
-
-    # Grant access to go binaries (if needed for project-installed tools)
-    for d in /Users/${primaryUser}/go \
-             /Users/${primaryUser}/go/bin; do
-      if [ -d "$d" ]; then
-        chmod +a "group:aicoders allow read,execute,search,readattr,readextattr,readsecurity" "$d" 2>/dev/null || true
+    # Runs before home-manager's per-user activation (default order 1000), which
+    # runs as the agent user and has to be able to write anywhere it links into
+    # the home — e.g. Library/Fonts, which home-manager creates for every darwin
+    # user. A root-owned Library/ left by an earlier switch broke that, and since
+    # the failure aborts the switch, a re-own placed after it never got to run.
+    (lib.mkOrder 900 ''
+      echo "setting up synapse agent home..." >&2
+      mkdir -p ${synapseAgentHome}/Library ${synapseAgentHome}/.claude ${synapseAgentHome}/.config ${synapseAgentHome}/.cache ${synapseAgentHome}/.local/share ${synapseAgentHome}/.local/bin ${synapseAgentHome}/.claude-infracost ${synapseAgentHome}/.codex ${synapseAgentHome}/.codex-infracost ${synapseAgentHome}/.aws ${synapseAgentHome}/.kube
+      # Re-own only what is actually mis-owned. A blanket `chown -R` over the
+      # whole home walked ~950k paths on every switch to change nothing in steady
+      # state, and it only had to hit one transient read error to take the entire
+      # rebuild down with it: readdir on macOS' sandbox containers under
+      # Library/Containers intermittently fails with EINTR ("Interrupted system
+      # call"), GNU chown treats that as fatal, and `set -e` at the top of
+      # nix-darwin's activation script does the rest. Those containers are only
+      # ever written by processes already running as the agent user, so prune
+      # them; and warn rather than abort if anything else refuses to be read.
+      # Xcode also attaches its downloaded toolchains (e.g. MetalToolchain) as
+      # read-only disk images under DVTDownloads/*/mounts; chown can't touch
+      # those and produced hundreds of EROFS errors per switch, so prune them too.
+      if ! find ${synapseAgentHome} \
+        \( -path "${synapseAgentHome}/Library/Containers" \
+           -o -path "${synapseAgentHome}/Library/Group Containers" \
+           -o -path "${synapseAgentHome}/Library/Developer/DVTDownloads/*/mounts" \) -prune -o \
+        \( ! -user ${synapseAgentUser} -o ! -group aicoders \) \
+        -exec chown -h ${synapseAgentUser}:aicoders {} + ; then
+        echo "warning: some paths under ${synapseAgentHome} could not be re-owned" >&2
       fi
-    done
-  '')
+    '')
+
+    # sops-nix decrypts secrets at mkAfter (1500); copy its rendered templates afterwards.
+    # Anything created here as root must be owned explicitly: the re-own above has
+    # already run.
+    (lib.mkOrder 1600 ''
+
+      # Login keychain for the service user, empty password, kept UNLOCKED with
+      # auto-lock disabled. The earlier "leave it locked, tools fall back to
+      # file storage" theory was wrong in practice: a locked DEFAULT keychain
+      # doesn't trigger file fallback (only a missing one does) — it makes
+      # `security` raise a GUI unlock prompt on the console user's screen
+      # (bit the Claude Code MCP OAuth flow, 2026-08-24; the default
+      # lock-on-sleep timeout=300s meant it was always locked again by the
+      # time a token write happened). Unlocked-with-empty-password is the
+      # strongest posture actually available to a headless uid: a passphrase
+      # would have to live in a file the same uid can read, item ACLs still
+      # gate cross-process reads, and at-rest protection is FileVault + file
+      # perms — same as this user's sops-managed credentials.
+      #
+      # NOT named login.keychain-db: macOS special-cases a keychain named
+      # "login" and won't unlock it with the empty password it was created
+      # with. It works until the first lock (reboot), then every credential
+      # read raises the GUI prompt. Reproduced 2026-10-14; any other name
+      # round-trips lock/unlock with "" fine. Stale login.keychain-db* files
+      # from before the rename are left alone (their items can't be decrypted).
+      SA_KC="${synapseAgentHome}/Library/Keychains/agent.keychain-db"
+      if [ ! -f "$SA_KC" ]; then
+        install -d -o ${synapseAgentUser} -g aicoders "$(dirname "$SA_KC")"
+        sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security create-keychain -p "" "$SA_KC"
+      fi
+      # Every run, not just on create, so existing installs move off the old
+      # login keychain: Claude Code etc. write to the default keychain.
+      sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security list-keychains -d user -s "$SA_KC" || true
+      sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security default-keychain -s "$SA_KC" || true
+      # Unlock BEFORE changing settings, and never let either step be fatal.
+      # set-keychain-settings on a locked keychain has to unlock it first, and
+      # with no password on the command line that means raising the GUI unlock
+      # panel. Activation has no one to answer it, so it comes back
+      # errSecUserCanceled ("User canceled the operation") and `set -e` takes
+      # the entire switch down with it — which is exactly what happened on
+      # 2026-08-31: the system profile advanced to the new generation but
+      # /run/current-system stayed on the old one, so the rebuild looked
+      # applied while the old wrappers kept running. unlock-keychain is safe
+      # to go first because -p supplies the password rather than prompting.
+      # It also verifies the password even when the keychain is already
+      # unlocked, so a failure here means the password is no longer "".
+      if ! sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security unlock-keychain -p "" "$SA_KC" 2>/dev/null; then
+        echo "warning: the agent keychain ($SA_KC) does not accept the empty" >&2
+        echo "         password; credential reads WILL raise GUI prompts. Move it" >&2
+        echo "         aside and switch again to recreate it." >&2
+      # no -l/-u/-t flags => never auto-lock, no lock-on-sleep
+      elif ! sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} /usr/bin/security set-keychain-settings "$SA_KC" 2>/dev/null; then
+        echo "warning: could not disable auto-lock on the agent keychain" >&2
+      fi
+
+      # Machine-wide Claude Code policy (see claudeManagedMcp above). Root-owned
+      # and read-only to everyone else, so agents cannot edit it.
+      install -d -m 755 -o root -g wheel "/Library/Application Support/ClaudeCode"
+      install -m 644 -o root -g wheel ${claudeManagedMcp} "/Library/Application Support/ClaudeCode/managed-mcp.json"
+      install -m 644 -o root -g wheel ${claudeManagedSettings} "/Library/Application Support/ClaudeCode/managed-settings.json"
+
+      # Write claude settings.json
+      rm -f ${synapseAgentHome}/.claude/settings.json
+      cat > ${synapseAgentHome}/.claude/settings.json <<'SETTINGS_EOF'
+      ${builtins.toJSON claudeSettings}
+      SETTINGS_EOF
+      chown ${synapseAgentUser}:aicoders ${synapseAgentHome}/.claude/settings.json
+      chmod 600 ${synapseAgentHome}/.claude/settings.json
+
+      # Copy rendered configs as writable files; both CLIs may update their settings.
+      rm -f ${synapseAgentHome}/.claude-infracost/settings.json
+      install -m 600 -o ${synapseAgentUser} -g aicoders \
+        ${config.sops.templates."claude-infracost-settings.json".path} \
+        ${synapseAgentHome}/.claude-infracost/settings.json
+
+      # Write infracost codex config.toml (LiteLLM gateway provider)
+      install -m 600 -o ${synapseAgentUser} -g aicoders \
+        ${config.sops.templates."codex-infracost-config.toml".path} \
+        ${synapseAgentHome}/.codex-infracost/config.toml
+      ${mergeCodexSettings}/bin/merge-codex-settings \
+        ${synapseAgentHome}/.codex-infracost/config.toml \
+        ${lib.escapeShellArg (builtins.toJSON codexSettings)}
+      chown ${synapseAgentUser}:aicoders ${synapseAgentHome}/.codex-infracost/config.toml
+      chmod 600 ${synapseAgentHome}/.codex-infracost/config.toml
+
+      # Merge preferred settings into the agent's default codex profile
+      ${mergeCodexSettings}/bin/merge-codex-settings \
+        ${synapseAgentHome}/.codex/config.toml \
+        ${lib.escapeShellArg (builtins.toJSON codexSettings)}
+      chown ${synapseAgentUser}:aicoders ${synapseAgentHome}/.codex/config.toml
+      chmod 600 ${synapseAgentHome}/.codex/config.toml
+
+      # Merge mcpServers into ~/.claude.json
+      CLAUDE_JSON="${synapseAgentHome}/.claude.json"
+      if [ ! -f "$CLAUDE_JSON" ]; then
+        echo '{}' > "$CLAUDE_JSON"
+        chown ${synapseAgentUser}:aicoders "$CLAUDE_JSON"
+        chmod 600 "$CLAUDE_JSON"
+      fi
+      ${pkgs.python3}/bin/python3 -c "
+      import json, sys
+      path = sys.argv[1]
+      with open(path) as f:
+          d = json.load(f)
+      d['mcpServers'] = json.loads(sys.argv[2])
+      with open(path, 'w') as f:
+          json.dump(d, f, indent=2)
+      " "$CLAUDE_JSON" '${builtins.toJSON mcpConfig.mcpServers}'
+
+      # Install rustup components as _synapseagent
+      if command -v rustup >/dev/null 2>&1; then
+        sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} PATH="/run/current-system/sw/bin:${synapseAgentHome}/.cargo/bin:/opt/homebrew/bin:$PATH" rustup component add rust-analyzer rustfmt 2>/dev/null || true
+      fi
+
+      # Install and enable plugins as _synapseagent
+      echo "installing claude plugins for ${synapseAgentUser}..." >&2
+      if [ -x /opt/homebrew/bin/claude ]; then
+        SA_CMD="sudo -u ${synapseAgentUser} -H env HOME=${synapseAgentHome} PATH=/run/current-system/sw/bin:${synapseAgentHome}/.cargo/bin:/opt/homebrew/bin:''$PATH"
+
+        # Marketplaces
+        $SA_CMD /opt/homebrew/bin/claude plugin marketplace add anthropics/claude-plugins-official 2>/dev/null || true
+        $SA_CMD /opt/homebrew/bin/claude plugin marketplace add infracost/agent-skills 2>/dev/null || true
+        $SA_CMD /opt/homebrew/bin/claude plugin marketplace add /Users/${primaryUser}/Development/personal/synapse/.claude-marketplace 2>/dev/null || true
+
+        # Infracost plugin
+        $SA_CMD /opt/homebrew/bin/claude plugin install infracost@infracost 2>/dev/null || true
+
+        # Official LSP plugins
+        for plugin in \
+          rust-analyzer-lsp \
+          typescript-lsp \
+          swift-lsp \
+          pyright-lsp \
+          gopls-lsp \
+          ruby-lsp \
+        ; do
+          $SA_CMD /opt/homebrew/bin/claude plugin install "$plugin@claude-plugins-official" 2>/dev/null || true
+          $SA_CMD /opt/homebrew/bin/claude plugin enable "$plugin@claude-plugins-official" 2>/dev/null || true
+        done
+
+        # Synapse marketplace plugins
+        for plugin in \
+          spec-language-server \
+          bash-language-server \
+          svelte-lsp \
+          terraform-ls \
+          astro-lsp \
+        ; do
+          $SA_CMD /opt/homebrew/bin/claude plugin install "$plugin@synapse" 2>/dev/null || true
+          $SA_CMD /opt/homebrew/bin/claude plugin enable "$plugin@synapse" 2>/dev/null || true
+        done
+      fi
+
+      echo "setting up ai permissions..." >&2
+      # Grant aicoders group basic access to traverse user home and system directories
+      chmod +a "group:aicoders allow read,execute,search" "$TMPDIR" 2>/dev/null || true
+      chmod +a "group:aicoders allow read,execute,search,file_inherit,directory_inherit" "$\{TMPDIR\}TemporaryItems" 2>/dev/null || true
+      chmod +a "group:aicoders allow search" /var/folders/ 2>/dev/null || true
+
+      # Grant access to go binaries (if needed for project-installed tools)
+      for d in /Users/${primaryUser}/go \
+               /Users/${primaryUser}/go/bin; do
+        if [ -d "$d" ]; then
+          chmod +a "group:aicoders allow read,execute,search,readattr,readextattr,readsecurity" "$d" 2>/dev/null || true
+        fi
+      done
+    '')
   ];
 
   homebrew = {
