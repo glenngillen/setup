@@ -14,13 +14,20 @@
     "OTEL_EXPORTER_OTLP_PROTOCOL": "http/json"
   },
   "enabledPlugins": {
-    "swift-lsp@claude-plugins-official": true
+    "swift-lsp@claude-plugins-official": true,
+    "infracost-ai@infracost-ai": true
   },
   "extraKnownMarketplaces": {
     "synapse": {
       "source": {
         "source": "directory",
         "path": "/Users/gg/Development/personal/synapse/.claude-marketplace"
+      }
+    },
+    "infracost-ai": {
+      "source": {
+        "source": "directory",
+        "path": "/Users/gg/.local/share/infracost-ai"
       }
     }
   }
