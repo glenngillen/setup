@@ -161,7 +161,7 @@ in
       "sqlite"
       "starship"
       "xh" # curl alternative
-      "zig@0.15"
+      "zig"
       "xcodegen"
       "libpq"
     ];
