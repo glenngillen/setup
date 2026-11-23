@@ -903,6 +903,25 @@ in
       programs.tmux = {
         enable = true;
       };
+
+      # rmux (synapse's tmux-compatible multiplexer) reads its own config, not
+      # tmux.conf. Claude Code's fullscreen renderer keeps the transcript on
+      # the alternate screen, so rmux scrollback is empty; forward the mouse
+      # to the pane instead. rmux drops mouse events that have no root
+      # binding (tmux forwards them), so bind the ones its defaults miss:
+      # without wheel-down you can't scroll back, and without the release
+      # events Claude never sees a selection end, so its copy-on-select
+      # lands one selection late.
+      home.file.".config/rmux/rmux.conf".text = ''
+        set -g mouse on
+        bind-key -T root WheelDownPane send-keys -M
+        bind-key -T root MouseUp1Pane send-keys -M
+        bind-key -T root MouseUp2Pane send-keys -M
+        bind-key -T root MouseUp3Pane send-keys -M
+        bind-key -T root MouseDragEnd1Pane send-keys -M
+        bind-key -T root MouseDragEnd2Pane send-keys -M
+        bind-key -T root MouseDragEnd3Pane send-keys -M
+      '';
     };
 
   home-manager.users.${synapseAgentUser} = {
