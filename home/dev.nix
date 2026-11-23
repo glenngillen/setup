@@ -173,6 +173,8 @@ in
       "screenflow"
 
       "vibetunnel"
+
+      "session-manager-plugin"
     ];
 
     masApps = {
