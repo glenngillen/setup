@@ -69,6 +69,12 @@ _: {
         # generic emoji diamond.
         symbol = "󱁢 ";
       };
+      # Symbols on the input line must not be text-plus-VS16 emoji: zsh counts
+      # the stock aws ☁️ and nix_shell ❄️ as one column, Ghostty draws two, and
+      # ZLE's redraws after a paste then land a column off (doubled characters,
+      # swallowed spaces). Nerd Font glyphs are one column on both sides.
+      aws.symbol = " "; # nf-dev-aws (U+E7AD)
+      nix_shell.symbol = " "; # nf-linux-nixos (U+F313)
       # $virtualenv comes from the environment, not a subprocess, so it stays.
       python.format = "[ $symbol(\\($virtualenv\\) )]($style)";
       cmd_duration = {
